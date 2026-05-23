@@ -176,9 +176,55 @@ st.set_page_config(page_title="うちのコ日常アルバム - Pet Daily AI", p
 
 # --- ユーザーID（世帯ID）の自動生成とクエリパラメータ処理 ---
 if "user_id" not in st.query_params:
-    new_id = str(uuid.uuid4())[:8]
-    st.query_params["user_id"] = new_id
-    st.rerun()
+    # クライアント側の LocalStorage から既存の user_id の復元を試みる
+    # window.parent.location.replace はセキュリティ制限を回避しながら親ウィンドウをリダイレクトできます
+    detect_id_js = """
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; font-family: sans-serif; color: #94A3B8; background-color: #0B0F19;">
+        <div style="font-size: 2.5rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;">🐾</div>
+        <div style="font-size: 1.1rem; font-weight: bold; color: #F8FAFC;">うちのコ日常アルバムを読み込み中...</div>
+        <div style="font-size: 0.85rem; margin-top: 0.5rem; color: #64748B;">まもなくアルバムが開きます。少々お待ちください。</div>
+    </div>
+    <script>
+    try {
+        const savedUserId = localStorage.getItem("pet_user_id");
+        // 親のURL（document.referrer）を取得。 Same-Origin エラーを回避するため親の location.href の読み取りは行わない
+        let parentUrlStr = document.referrer;
+        if (!parentUrlStr || parentUrlStr.indexOf(window.location.hostname) === -1) {
+            parentUrlStr = window.location.href;
+        }
+        const parentUrl = new URL(parentUrlStr);
+        
+        if (savedUserId && savedUserId.length >= 4) {
+            parentUrl.searchParams.set("user_id", savedUserId);
+        } else {
+            // 新規に8文字のランダムIDを生成
+            const newId = Math.random().toString(36).substring(2, 10);
+            parentUrl.searchParams.set("user_id", newId);
+        }
+        
+        // 親ウィンドウをリダイレクト
+        if (window.parent && window.parent !== window) {
+            window.parent.location.replace(parentUrl.toString());
+        } else {
+            window.location.replace(parentUrl.toString());
+        }
+    } catch(e) {
+        // 例外が発生した場合は通常のクエリ付与にフォールバック
+        const fallbackId = Math.random().toString(36).substring(2, 10);
+        window.location.href = "?user_id=" + fallbackId;
+    }
+    </script>
+    <style>
+        @keyframes pulse {
+            0% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.2); opacity: 1; }
+            100% { transform: scale(1); opacity: 0.6; }
+        }
+    </style>
+    """
+    # 画面全体にローダーを表示し、リダイレクトJSを動かす
+    components.html(detect_id_js, height=800, scrolling=False)
+    st.stop()
 
 user_id = st.query_params["user_id"]
 
@@ -443,24 +489,34 @@ is_admin = st.query_params.get("admin") == "true"
 
 # サーバー側にプロフィールが無い場合、ブラウザの LocalStorage からの復元を試みるJSを埋め込み
 if not saved_profile:
-    restore_js = """
+    restore_js = f"""
     <script>
-    try {
+    try {{
         const profile = localStorage.getItem("pet_profile");
-        if (profile) {
+        if (profile) {{
             const parsed = JSON.parse(profile);
-            if (parsed && parsed.name) {
+            if (parsed && parsed.name) {{
                 const encoded = encodeURIComponent(profile);
-                const parentUrl = new URL(window.parent.location.href);
-                if (!parentUrl.searchParams.has("restore_profile")) {
+                // Same-Origin ポリシー違反を避けるため、parent.location.href ではなく document.referrer を使用
+                let parentUrlStr = document.referrer;
+                if (!parentUrlStr || parentUrlStr.indexOf(window.location.hostname) === -1) {{
+                    parentUrlStr = window.location.href;
+                }}
+                const parentUrl = new URL(parentUrlStr);
+                if (!parentUrl.searchParams.has("restore_profile")) {{
                     parentUrl.searchParams.set("restore_profile", encoded);
-                    window.parent.location.href = parentUrl.toString();
-                }
-            }
-        }
-    } catch(e) {
+                    parentUrl.searchParams.set("user_id", "{user_id}");
+                    if (window.parent && window.parent !== window) {{
+                        window.parent.location.replace(parentUrl.toString());
+                    }} else {{
+                        window.location.replace(parentUrl.toString());
+                    }}
+                }}
+            }}
+        }}
+    }} catch(e) {{
         console.error("LocalStorage restore failed:", e);
-    }
+    }}
     </script>
     """
     components.html(restore_js, height=0, width=0)
@@ -492,6 +548,7 @@ if "save_profile_to_localstorage" in st.session_state:
     <script>
     try {{
         localStorage.setItem("pet_profile", `{json.dumps(profile_to_save, ensure_ascii=False)}`);
+        localStorage.setItem("pet_user_id", "{user_id}");
     }} catch(e) {{
         console.error("LocalStorage save failed:", e);
     }}
