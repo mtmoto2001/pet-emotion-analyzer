@@ -6,6 +6,8 @@ import base64
 import data_manager
 import ai_core
 import streamlit.components.v1 as components
+import pandas as pd
+import json
 
 @st.cache_data
 def get_loading_video_base64():
@@ -15,6 +17,138 @@ def get_loading_video_base64():
             data = f.read()
         return base64.b64encode(data).decode()
     return ""
+
+def render_admin_dashboard():
+    st.markdown("""
+    <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
+        <h2 style="color: #00E6FF; margin: 0; font-weight: bold; font-size: 1.8rem;">🛠️ 管理者コントロールセンター</h2>
+        <p style="color: #94A3B8; font-size: 0.9rem; margin-top: 0.3rem; margin-bottom: 0;">実証PoC 10世帯向けシステム監視・テレメトリ・疎通テスト</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ログファイルの読み込みとDataFrame化
+    log_file = data_manager.USAGE_LOG_FILE
+    logs = []
+    if os.path.exists(log_file):
+        try:
+            with open(log_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        logs.append(json.loads(line.strip()))
+        except Exception as e:
+            st.error(f"ログファイルの読み込みエラー: {e}")
+
+    df_logs = pd.DataFrame(logs)
+
+    # 世帯プロフィールのロード
+    profiles = data_manager.load_all_profiles()
+    df_profiles = pd.DataFrame(profiles)
+    
+    # KPIサマリー
+    col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+    total_households = len(df_profiles) if not df_profiles.empty else 0
+    total_generations = len(df_logs) if not df_logs.empty else 0
+    error_count = len(df_logs[df_logs["status"] == "ERROR"]) if not df_logs.empty and "status" in df_logs.columns else 0
+    error_rate = (error_count / total_generations * 100) if total_generations > 0 else 0.0
+
+    with col_kpi1:
+        st.markdown(f'<div class="status-card" style="border-left: 4px solid #00E6FF; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: white;">{total_households}</div><div style="font-size: 0.8rem; color: #94A3B8;">登録世帯数 (スマホ)</div></div>', unsafe_allow_html=True)
+    with col_kpi2:
+        st.markdown(f'<div class="status-card" style="border-left: 4px solid #FFB800; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: white;">{total_generations}</div><div style="font-size: 0.8rem; color: #94A3B8;">思い出ストーリー生成数</div></div>', unsafe_allow_html=True)
+    with col_kpi3:
+        st.markdown(f'<div class="status-card" style="border-left: 4px solid #FF4A4A; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: white;">{error_count}</div><div style="font-size: 0.8rem; color: #94A3B8;">システムエラー数</div></div>', unsafe_allow_html=True)
+    with col_kpi4:
+        st.markdown(f'<div class="status-card" style="border-left: 4px solid #A652FF; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: white;">{error_rate:.1f}%</div><div style="font-size: 0.8rem; color: #94A3B8;">APIエラー率</div></div>', unsafe_allow_html=True)
+
+    tab_dash, tab_house, tab_api, tab_log = st.tabs(["📈 利用統計", "🏡 登録世帯一覧", "🔑 API疎通テスト", "📝 サーバー生ログ"])
+    
+    with tab_dash:
+        if df_logs.empty:
+            st.info("ストーリーが生成されると、ここにグラフ分析がリアルタイム描画されます🐾")
+        else:
+            g1, g2 = st.columns(2)
+            with g1:
+                st.markdown("##### 🐶 世帯（ペット名）別の思い出生成頻度")
+                if "pet_name" in df_logs.columns:
+                    active_users = df_logs.groupby(["user_id", "pet_name"]).size().reset_index(name="生成回数")
+                    active_users["表示名"] = active_users["pet_name"] + " (" + active_users["user_id"] + ")"
+                    st.bar_chart(active_users.set_index("表示名")["生成回数"], color="#00E6FF")
+            with g2:
+                st.markdown("##### 📚 人気の小説ジャンル")
+                if "genre" in df_logs.columns:
+                    genre_counts = df_logs[df_logs["genre"] != ""]["genre"].value_counts()
+                    st.bar_chart(genre_counts, color="#FFB800")
+                    
+    with tab_house:
+        st.markdown("##### 🏡 登録世帯（10世帯PoC）のペットプロフィール一覧")
+        if df_profiles.empty:
+            st.warning("まだ登録世帯がありません。")
+        else:
+            display_cols = {
+                "registered_at": "登録日時",
+                "user_id": "世帯ID",
+                "name": "名前",
+                "pet_type": "種別",
+                "breed": "品種",
+                "age_display": "計算年齢",
+                "owner_call": "飼い主の呼び方",
+                "personality": "基本性格"
+            }
+            existing_cols = [c for c in display_cols.keys() if c in df_profiles.columns]
+            st.dataframe(df_profiles[existing_cols].rename(columns=display_cols), use_container_width=True)
+            
+    with tab_api:
+        st.markdown("##### 🔑 API疎通テスト＆管理")
+        
+        def mask_key(k):
+            if not k: return "未設定 🔴"
+            return f"{k[:4]}...{k[-4:]} (設定済み 🟢)"
+            
+        # load_configを呼び出してAPIキーを動的に取得
+        c_data = data_manager.load_config()
+        st.markdown(f"**Google Gemini APIキー:** `{mask_key(c_data.get('GOOGLE_API_KEY'))}`", unsafe_allow_html=True)
+        st.markdown(f"**LINEアクセストークン:** `{mask_key(c_data.get('LINE_CHANNEL_ACCESS_TOKEN'))}`", unsafe_allow_html=True)
+        
+        st.write("---")
+        test_g, test_l = st.columns(2)
+        with test_g:
+            if st.button("🤖 Gemini API 疎通テスト", key="dash_test_gemini", use_container_width=True):
+                api_key = c_data.get("GOOGLE_API_KEY")
+                if not api_key: st.error("APIキーがありません")
+                else:
+                    with st.spinner("検証中..."):
+                        try:
+                            response = ai_core.run_lightweight_test(api_key)
+                            st.success(f"🟢 接続成功！AI応答: {response}")
+                        except Exception as e: st.error(f"接続失敗: {e}")
+        with test_l:
+            if st.button("💬 LINE API 疎通テスト", key="dash_test_line", use_container_width=True):
+                line_token = c_data.get("LINE_CHANNEL_ACCESS_TOKEN")
+                if not line_token: st.error("トークンがありません")
+                else:
+                    with st.spinner("検証中..."):
+                        status = line_api.test_line_credentials(line_token)
+                        if "成功" in status or "200" in status:
+                            st.success(f"🟢 LINE疎通成功！ {status}")
+                        else: st.error(f"LINE疎通失敗: {status}")
+                        
+    with tab_log:
+        st.markdown("##### 📝 サーバー実行ログ（最新50件）")
+        if df_logs.empty:
+            st.warning("実行ログがまだありません。")
+        else:
+            df_logs_sorted = df_logs.iloc[::-1].head(50)
+            existing_log_cols = [c for c in ["timestamp", "user_id", "pet_name", "duration_ms", "status", "error_msg"] if c in df_logs_sorted.columns]
+            st.dataframe(
+                df_logs_sorted[existing_log_cols],
+                use_container_width=True
+            )
+            if st.button("🗑️ 実行ログをすべて消去", key="dash_clear_logs"):
+                try:
+                    if os.path.exists(log_file): os.remove(log_file)
+                    st.success("消去しました。再読み込みしてください。")
+                    st.rerun()
+                except Exception as e: st.error(f"エラー: {e}")
 
 # --- ページ設定 ---
 st.set_page_config(page_title="うちのコ日常アルバム - Pet Daily AI", page_icon="🐾", layout="wide")
@@ -251,6 +385,9 @@ def show_tutorial_dialog():
 saved_config = data_manager.load_config(user_id)
 saved_profile = data_manager.load_profile(user_id)
 
+# 管理者用パラメータチェック
+is_admin = st.query_params.get("admin") == "true"
+
 # サーバー側にプロフィールが無い場合、ブラウザの LocalStorage からの復元を試みるJSを埋め込み
 if not saved_profile:
     restore_js = """
@@ -282,6 +419,17 @@ if st.session_state.get("show_tutorial_after_reg"):
 
 st.markdown('<p class="main-title">🐾 うちのコ日常アルバム</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-title">お気に入りの写真から、愛犬・愛猫の心の声と特別な4コマストーリーをつむぐアルバムアプリ</p>', unsafe_allow_html=True)
+
+# --- モード切り替え (管理者用) ---
+current_mode = "アルバム作成🐾"
+if is_admin:
+    st.markdown("### 🛠️ 管理者メニュー")
+    current_mode = st.radio("表示モードを選択してください", ["アルバム作成🐾", "管理者ダッシュボード📊"], index=0, horizontal=True, key="admin_mode_select")
+    st.write("---")
+    
+    if current_mode == "管理者ダッシュボード📊":
+        render_admin_dashboard()
+        st.stop()  # 処理をここで中断し、これ以降の通常アルバム作成画面のレンダリングを防ぐ
 
 # --- LocalStorageへの保存トリガーJSの出力 ---
 if "save_profile_to_localstorage" in st.session_state:
@@ -433,7 +581,7 @@ with col1:
                 key="novel_genre_selectbox"
             )
             
-        uploaded_file = st.file_uploader("愛犬・愛猫の写真ファイルをアップロードしてください（.jpg / .jpeg / .png）", type=["jpg", "jpeg", "png"], key="fu_native_v7")
+        uploaded_file = st.file_uploader("愛犬・愛猫の写真ファイルをアップロードしてください（.jpg / .jpeg / .png）", type=["jpg", "jpeg", "png", "JPG", "JPEG", "PNG"], key="fu_native_v7")
         submit_button = st.form_submit_button(label="⚡️ 思い出のストーリーをつくる")
     
     p_bar = st.empty()
@@ -458,8 +606,12 @@ with col1:
             temp_dir = "temp_uploads"
             os.makedirs(temp_dir, exist_ok=True)
             
-            # 複数スマホからの同時利用時でもファイル名衝突が起きないUUID割り当て
-            _, ext = os.path.splitext(uploaded_file.name)
+            # Androidや特殊なMIME形式でもエラーにならないよう、拡張子の大文字小文字を整え、空なら.jpgに安全フォールバック
+            _, raw_ext = os.path.splitext(uploaded_file.name)
+            ext = raw_ext.lower() if raw_ext else ".jpg"
+            if ext not in [".jpg", ".jpeg", ".png"]:
+                ext = ".jpg"
+            
             temp_file_path = os.path.join(temp_dir, f"{uuid.uuid4().hex}{ext}")
             
             p_bar.progress(10)
