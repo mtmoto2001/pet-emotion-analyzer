@@ -636,10 +636,22 @@ def show_profile_dialog():
     p_gender = st.radio("性別", ["男の子", "女の子"], horizontal=True)
     p_owner_call = st.text_input("飼い主さんの呼び方（パパ、ママなど）", value="パパ")
     
-    st.write("お誕生日（年齢の自動判定に使用します）")
-    c_year = datetime.datetime.now().year
-    p_birth_y = st.selectbox("誕生年", list(range(c_year, c_year-25, -1)), index=2)
-    p_birth_m = st.selectbox("誕生月", list(range(1, 13)), index=0)
+    st.write("お誕生日（年齢の自動判定に使用します🐾）")
+    # スマホで圧倒的に選択しやすいカレンダー/日付入力UIに変更
+    today = datetime.date(2026, 5, 24)
+    default_birth = datetime.date(2023, 1, 1) # デフォルトで約3年前に設定してスクロールを最小化
+    min_birth = datetime.date(today.year - 25, 1, 1)
+    
+    p_birthday = st.date_input(
+        "お誕生日を選択",
+        value=default_birth,
+        min_value=min_birth,
+        max_value=today,
+        key="pet_birthday_input",
+        label_visibility="collapsed"
+    )
+    p_birth_y = p_birthday.year
+    p_birth_m = p_birthday.month
     
     personality_options = ["元気いっぱいでやんちゃ", "甘えん坊で寂しがり屋", "おっとりマイペース", "賢く、人間の言葉を理解しようとする", "臆病だけど優しい"]
     p_pers = st.selectbox("基本の性格傾向", personality_options)
@@ -647,7 +659,7 @@ def show_profile_dialog():
     
     if st.button("💾 この内容で登録する"):
         # 年齢の自動計算
-        current_date = datetime.date(2026, 5, 16)
+        current_date = datetime.date(2026, 5, 24) # 今日の日付に更新
         birth_date = datetime.date(p_birth_y, p_birth_m, 1)
         total_months = (current_date.year - birth_date.year) * 12 + current_date.month - birth_date.month
         if total_months < 0: age_display = "生後0ヶ月"
