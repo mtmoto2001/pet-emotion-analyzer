@@ -176,55 +176,9 @@ st.set_page_config(page_title="うちのコ日常アルバム - Pet Daily AI", p
 
 # --- ユーザーID（世帯ID）の自動生成とクエリパラメータ処理 ---
 if "user_id" not in st.query_params:
-    # クライアント側の LocalStorage から既存の user_id の復元を試みる
-    # window.parent.location.replace はセキュリティ制限を回避しながら親ウィンドウをリダイレクトできます
-    detect_id_js = """
-    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 80vh; font-family: sans-serif; color: #94A3B8; background-color: #0B0F19;">
-        <div style="font-size: 2.5rem; margin-bottom: 1rem; animation: pulse 1.5s infinite;">🐾</div>
-        <div style="font-size: 1.1rem; font-weight: bold; color: #F8FAFC;">うちのコ日常アルバムを読み込み中...</div>
-        <div style="font-size: 0.85rem; margin-top: 0.5rem; color: #64748B;">まもなくアルバムが開きます。少々お待ちください。</div>
-    </div>
-    <script>
-    try {
-        const savedUserId = localStorage.getItem("pet_user_id");
-        // 親のURL（document.referrer）を取得。 Same-Origin エラーを回避するため親の location.href の読み取りは行わない
-        let parentUrlStr = document.referrer;
-        if (!parentUrlStr || parentUrlStr.indexOf(window.location.hostname) === -1) {
-            parentUrlStr = window.location.href;
-        }
-        const parentUrl = new URL(parentUrlStr);
-        
-        if (savedUserId && savedUserId.length >= 4) {
-            parentUrl.searchParams.set("user_id", savedUserId);
-        } else {
-            // 新規に8文字のランダムIDを生成
-            const newId = Math.random().toString(36).substring(2, 10);
-            parentUrl.searchParams.set("user_id", newId);
-        }
-        
-        // 親ウィンドウをリダイレクト
-        if (window.parent && window.parent !== window) {
-            window.parent.location.replace(parentUrl.toString());
-        } else {
-            window.location.replace(parentUrl.toString());
-        }
-    } catch(e) {
-        // 例外が発生した場合は通常のクエリ付与にフォールバック
-        const fallbackId = Math.random().toString(36).substring(2, 10);
-        window.location.href = "?user_id=" + fallbackId;
-    }
-    </script>
-    <style>
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 0.6; }
-            50% { transform: scale(1.2); opacity: 1; }
-            100% { transform: scale(1); opacity: 0.6; }
-        }
-    </style>
-    """
-    # 画面全体にローダーを表示し、リダイレクトJSを動かす
-    components.html(detect_id_js, height=800, scrolling=False)
-    st.stop()
+    new_id = str(uuid.uuid4())[:8]
+    st.query_params["user_id"] = new_id
+    st.rerun()
 
 user_id = st.query_params["user_id"]
 
@@ -487,39 +441,51 @@ saved_profile = data_manager.load_profile(user_id)
 # 管理者用パラメータチェック
 is_admin = st.query_params.get("admin") == "true"
 
-# サーバー側にプロフィールが無い場合、ブラウザの LocalStorage からの復元を試みるJSを埋め込み
+# サーバー側にプロフィールが無い場合、ブラウザの LocalStorage からの復元案内ボタンを提示
 if not saved_profile:
-    restore_js = f"""
+    restore_html = f"""
+    <div id="restore-container" style="display: none; margin: 1rem 0; padding: 1.2rem; background: rgba(255, 123, 147, 0.1); border: 1px dashed rgba(255, 123, 147, 0.4); border-radius: 16px; text-align: center; box-shadow: 0 8px 32px 0 rgba(0,0,0,0.15);">
+        <p style="margin: 0 0 0.8rem 0; color: #FFB88C; font-family: sans-serif; font-size: 0.95rem; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">🐾 以前ご登録いただいたペットの情報が見つかりました！</p>
+        <a id="restore-link" href="#" target="_top" style="display: inline-block; padding: 0.75rem 1.8rem; background: linear-gradient(135deg, #FF7B93 0%, #FFB88C 100%); color: #0B0F19; font-family: sans-serif; font-size: 0.9rem; font-weight: bold; text-decoration: none; border-radius: 30px; box-shadow: 0 4px 15px rgba(255, 123, 147, 0.4); transition: transform 0.2s;">
+            前回のデータを復元して始める 🚀
+        </a>
+    </div>
     <script>
     try {{
         const profile = localStorage.getItem("pet_profile");
+        const savedUserId = localStorage.getItem("pet_user_id");
         if (profile) {{
             const parsed = JSON.parse(profile);
             if (parsed && parsed.name) {{
-                const encoded = encodeURIComponent(profile);
-                // Same-Origin ポリシー違反を避けるため、parent.location.href ではなく document.referrer を使用
+                const container = document.getElementById("restore-container");
+                const link = document.getElementById("restore-link");
+                
+                // 親のURL（referrer）を取得
                 let parentUrlStr = document.referrer;
                 if (!parentUrlStr || parentUrlStr.indexOf(window.location.hostname) === -1) {{
                     parentUrlStr = window.location.href;
                 }}
                 const parentUrl = new URL(parentUrlStr);
-                if (!parentUrl.searchParams.has("restore_profile")) {{
-                    parentUrl.searchParams.set("restore_profile", encoded);
+                
+                // 復元用パラメータを付与
+                const encodedProfile = encodeURIComponent(profile);
+                parentUrl.searchParams.set("restore_profile", encodedProfile);
+                if (savedUserId) {{
+                    parentUrl.searchParams.set("user_id", savedUserId);
+                }} else {{
                     parentUrl.searchParams.set("user_id", "{user_id}");
-                    if (window.parent && window.parent !== window) {{
-                        window.parent.location.replace(parentUrl.toString());
-                    }} else {{
-                        window.location.replace(parentUrl.toString());
-                    }}
                 }}
+                
+                link.href = parentUrl.toString();
+                container.style.display = "block";
             }}
         }}
     }} catch(e) {{
-        console.error("LocalStorage restore failed:", e);
+        console.error("LocalStorage check failed:", e);
     }}
     </script>
     """
-    components.html(restore_js, height=0, width=0)
+    components.html(restore_html, height=120)
 
 # --- 登録完了後に自動でチュートリアルを表示する処理 ---
 if st.session_state.get("show_tutorial_after_reg"):
@@ -597,6 +563,37 @@ with st.sidebar:
         👤 <b>飼い主さんの呼び方:</b> {saved_profile.get('owner_call')}
         </div>
         """, unsafe_allow_html=True)
+        
+        # --- 専用URLコピーエリアの追加 ---
+        app_url = f"https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/?user_id={user_id}"
+        st.markdown("### 🔗 あなた専用のアルバムURL")
+        st.markdown(f"""
+        <div style="background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; margin-bottom: 0.5rem; word-break: break-all; font-family: monospace;">
+            {app_url}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # クリップボードコピー機能用のボタン
+        copy_js = f"""
+        <div style="text-align: center; width: 100%;">
+            <button onclick="copyUrl()" style="width: 100%; padding: 0.65rem; background: linear-gradient(135deg, #FF7B93 0%, #FFB88C 100%); color: #0B0F19; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(255, 123, 147, 0.3);">
+                📋 専用URLをコピーする
+            </button>
+        </div>
+        <script>
+        function copyUrl() {{
+            const tempInput = document.createElement("input");
+            tempInput.value = "{app_url}";
+            document.body.appendChild(tempInput);
+            tempInput.select();
+            document.execCommand("copy");
+            document.body.removeChild(tempInput);
+            alert("🐾 あなた専用のアルバムURLをコピーしました！\\n\\nブラウザのブックマークに登録するか、LINEのメモ等に保存してください。次回からこのURLをタップするだけで直接アルバムを開けます。");
+        }}
+        </script>
+        """
+        components.html(copy_js, height=45)
+        st.caption("※このURLをブックマーク、またはスマホの『ホーム画面に追加』に登録すると、次回から入力なしで直接このアルバムを開くことができます🐾")
         
         with st.expander("📝 登録情報を変更する"):
             st.info("情報を変更して「登録情報を更新する」を押してください。")
