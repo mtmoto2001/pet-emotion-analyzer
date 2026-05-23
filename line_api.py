@@ -29,3 +29,23 @@ def send_to_line_broadcast(token, story_text, image_prompt):
             return f"❌ LINE配信失敗（エラーコード: {response.status_code}）: {response.text}"
     except Exception as e:
         return f"❌ LINE通信障害: {e}"
+
+def test_line_credentials(token):
+    """
+    LINEボットの情報を取得して、アクセストークンの有効性をテストする (実際にメッセージを送信しないため安全)
+    """
+    if not token:
+        return "未設定"
+    url = "https://api.line.me/v2/bot/info"
+    headers = {
+        "Authorization": f"Bearer {token}"
+    }
+    try:
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            bot_info = response.json()
+            return f"成功 🟢 (Bot名: {bot_info.get('displayName', '不明')}, ID: {bot_info.get('basicId', '不明')})"
+        else:
+            return f"無効なトークン 🔴 (HTTP {response.status_code})"
+    except Exception as e:
+        return f"通信エラー 🔴: {e}"

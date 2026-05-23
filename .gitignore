@@ -41,6 +41,7 @@ config.json
 config_*.json
 pet_profile.json
 pet_profile_*.json
+usage_log.jsonl
 
 # Backups and temporary uploads
 *.py.bak*

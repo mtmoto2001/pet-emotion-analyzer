@@ -46,27 +46,139 @@ if "restore_profile" in st.query_params:
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&display=swap');
-    html, body, [data-testid="stAppViewContainer"] { font-family: 'Noto Sans JP', sans-serif; }
-    .main-title { background: linear-gradient(45deg, #FF7B93, #FFB88C); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-weight: 700; font-size: 2.8rem; margin-bottom: 0.2rem; }
-    .sub-title { color: #A0AEC0; font-size: 1.1rem; margin-bottom: 2rem; }
     
-    /* スマホやダーク/ライトモード問わず、超高コントラストで確実に読めるテキストボックス */
-    .line-preview-box { 
-        background-color: #1A202C !important; 
-        border-left: 5px solid #FF7B93 !important; 
-        border-radius: 12px; 
-        padding: 1.5rem; 
-        margin-top: 1rem; 
-        color: #FFFFFF !important; 
-        white-space: pre-wrap; 
-        font-size: 1.05rem; 
-        line-height: 1.7;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+    /* ベースリセット ＆ スマートフォン最適化 */
+    html, body, [data-testid="stAppViewContainer"] {
+        font-family: 'Noto Sans JP', sans-serif;
+        background-color: #0F172A; /* 深みのあるロイヤルダークブルー */
     }
     
-    .status-card { background-color: #2D3748; padding: 1rem; border-radius: 8px; margin-bottom: 1rem; border: 1px solid #4A5568; }
-    div[data-testid="stCodeBlock"] { border-radius: 8px !important; border: 1px solid #4A5568 !important; }
-    .stButton>button { background: linear-gradient(135deg, #FF7B93 0%, #FFB88C 100%) !important; color: white !important; font-weight: bold !important; border: none !important; border-radius: 8px !important; padding: 0.8rem 2rem !important; transition: all 0.3s ease !important; width: 100% !important; font-size: 1.1rem !important; cursor: pointer; }
+    /* プレミアムグラデーションタイトル */
+    .main-title {
+        background: linear-gradient(45deg, #FF7B93, #FFB88C);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 700;
+        font-size: 2.2rem !important; /* スマホで折れ曲がらないよう少し縮小 */
+        margin-bottom: 0.1rem;
+        text-align: center;
+    }
+    .sub-title {
+        color: #94A3B8;
+        font-size: 0.95rem;
+        margin-bottom: 1.5rem;
+        text-align: center;
+        line-height: 1.5;
+    }
+    
+    /* ガラスモーフィズム・透過角丸プレミアムカード */
+    .status-card {
+        background: rgba(30, 41, 59, 0.7) !important;
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: 1.2rem;
+        border-radius: 16px;
+        margin-bottom: 1rem;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+    }
+    
+    /* 超高コントラスト読書 preview ボックス (スマホ最適化) */
+    .line-preview-box { 
+        background-color: #0F172A !important; 
+        border-left: 5px solid #FF7B93 !important; 
+        border-radius: 12px; 
+        padding: 1.2rem; 
+        margin-top: 0.8rem; 
+        color: #F8FAFC !important; 
+        white-space: pre-wrap; 
+        font-size: 1.02rem; 
+        line-height: 1.8;
+        box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.15);
+        border: 1px solid rgba(255,255,255,0.05);
+    }
+    
+    /* 入力フォームのスマホ最適化 */
+    div[data-testid="stForm"] {
+        background: rgba(30, 41, 59, 0.55) !important;
+        backdrop-filter: blur(10px);
+        border-radius: 20px !important;
+        border: 1px solid rgba(255,255,255,0.07) !important;
+        padding: 1.5rem !important;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    
+    /* モバイルの親指にフィットする大きめのタッチ領域 */
+    .stButton>button {
+        background: linear-gradient(135deg, #FF7B93 0%, #FFB88C 100%) !important;
+        color: white !important;
+        font-weight: bold !important;
+        border: none !important;
+        border-radius: 12px !important;
+        padding: 0.9rem 2rem !important;
+        transition: transform 0.1s ease, box-shadow 0.2s ease !important;
+        width: 100% !important;
+        font-size: 1.1rem !important;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(255, 123, 147, 0.3);
+    }
+    .stButton>button:active {
+        transform: scale(0.98);
+        box-shadow: 0 2px 8px rgba(255, 123, 147, 0.2);
+    }
+    
+    /* 全画面ローディングオーバーレイ */
+    .full-screen-loader {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background-color: rgba(15, 23, 42, 0.97); /* 深みのあるロイヤルダーク背景で100%覆う */
+        z-index: 999999 !important;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 2rem;
+        box-sizing: border-box;
+        animation: loaderFadeIn 0.3s ease-out forwards;
+    }
+    .loader-card {
+        text-align: center;
+        max-width: 480px;
+        width: 100%;
+        background: rgba(30, 41, 59, 0.6);
+        border: 1px solid rgba(255,255,255,0.1);
+        padding: 2rem;
+        border-radius: 24px;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        backdrop-filter: blur(15px);
+    }
+    .loading-video {
+        width: 100%;
+        max-width: 320px;
+        border-radius: 18px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+        border: 2px solid rgba(255, 255, 255, 0.15);
+        margin-bottom: 1.5rem;
+    }
+    @keyframes loaderFadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    /* モバイルでの左右パディングの強制縮小 */
+    @media (max-width: 768px) {
+        .block-container {
+            padding-left: 0.8rem !important;
+            padding-right: 0.8rem !important;
+            padding-top: 1.5rem !important;
+        }
+        .main-title {
+            font-size: 1.9rem !important;
+        }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -364,47 +476,40 @@ with col1:
                 with loading_placeholder.container():
                     video_base64 = get_loading_video_base64()
                     st.markdown(f"""
-                    <style>
-                    .anim-container {{
-                      text-align: center; 
-                      padding: 1.5rem; 
-                      position: relative;
-                      display: flex;
-                      align-items: center;
-                      justify-content: center;
-                      background: linear-gradient(135deg, rgba(255, 123, 147, 0.08) 0%, rgba(255, 180, 200, 0.03) 100%);
-                      border-radius: 24px;
-                      border: 1px dashed rgba(255, 123, 147, 0.25);
-                      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
-                      overflow: hidden;
-                      margin-bottom: 1.5rem;
-                    }}
-                    .loading-video {{
-                      width: 100%;
-                      max-width: 480px;
-                      border-radius: 16px;
-                      box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-                      border: 1px solid rgba(255, 255, 255, 0.15);
-                    }}
-                    </style>
-                    <div class="anim-container">
-                      <video class="loading-video" autoplay loop muted playsinline>
-                        <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
-                        Your browser does not support the video tag.
-                      </video>
-                    </div>
-                    <div style="text-align: center;">
-                      <h4 style="color: #FF7B93; margin-top: 1rem;">心を込めて執筆中...🐾</h4>
-                      <p style="color: #A0AEC0;">AIが画像から情景を読み取り、特別な思い出絵本をつくっています。<br>最大で数分かかる場合があります。</p>
+                    <div class="full-screen-loader">
+                      <div class="loader-card">
+                        <video class="loading-video" autoplay loop muted playsinline>
+                          <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
+                          Your browser does not support the video tag.
+                        </video>
+                        <h3 style="color: #FF7B93; margin-top: 0.5rem; font-weight: bold; font-size: 1.4rem;">心を込めて執筆中...🐾</h3>
+                        <p style="color: #94A3B8; font-size: 0.95rem; line-height: 1.6; margin-top: 0.8rem; margin-bottom: 0;">
+                          AIが思い出の写真から本当の気持ちを読み解き、特別なショートストーリーを創作しています。<br>10〜30秒ほど楽しみにお待ちください。
+                        </p>
+                      </div>
                     </div>
                     """, unsafe_allow_html=True)
 
+                import time
+                start_time = time.time()
                 feelings_res, story_res, prompt_res = ai_core.run_ai_factory(GOOGLE_API_KEY, saved_profile, temp_file_path, story_mode, genre, p_bar, p_text)
+                duration_ms = (time.time() - start_time) * 1000
                 
                 if feelings_res:
                     st.session_state['display_feelings'] = feelings_res
                     st.session_state['display_story'] = story_res
                     st.session_state['display_prompt'] = prompt_res
+                    
+                    # ログの記録 (成功)
+                    data_manager.log_usage(
+                        user_id=user_id,
+                        pet_name=saved_profile.get("name", "不明"),
+                        pet_type=saved_profile.get("pet_type", "不明"),
+                        story_mode=story_mode,
+                        genre=genre if story_mode == "絵本小説風（客観的な視点から）" else "おしゃべり風",
+                        duration_ms=duration_ms,
+                        status="SUCCESS"
+                    )
                     
                     uploaded_file.seek(0)
                     st.session_state['display_image'] = uploaded_file.read()
@@ -423,6 +528,17 @@ with col1:
                         st.session_state.pop('line_status', None)
                 else:
                     st.error(prompt_res)
+                    # ログの記録 (失敗)
+                    data_manager.log_usage(
+                        user_id=user_id,
+                        pet_name=saved_profile.get("name", "不明"),
+                        pet_type=saved_profile.get("pet_type", "不明"),
+                        story_mode=story_mode,
+                        genre=genre if story_mode == "絵本小説風（客観的な視点から）" else "おしゃべり風",
+                        duration_ms=duration_ms,
+                        status="ERROR",
+                        error_msg=prompt_res
+                    )
             finally:
                 if 'loading_placeholder' in locals():
                     loading_placeholder.empty()

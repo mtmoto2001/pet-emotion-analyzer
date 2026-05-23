@@ -49,3 +49,62 @@ def load_profile(user_id=None):
 
 def save_profile(data, user_id=None): 
     save_json(get_profile_filepath(user_id), data)
+
+# --- 開発者コンソール用テレメトリ（ログ記録と世帯データ集約） ---
+import glob
+import datetime
+
+USAGE_LOG_FILE = "usage_log.jsonl"
+
+def log_usage(user_id, pet_name, pet_type, story_mode, genre, duration_ms, status, error_msg=None):
+    # 日本時間（UTC+9）の現在時刻を取得
+    tz_jst = datetime.timezone(datetime.timedelta(hours=9))
+    now = datetime.datetime.now(tz_jst).strftime("%Y-%m-%d %H:%M:%S")
+    
+    log_data = {
+        "timestamp": now,
+        "user_id": user_id,
+        "pet_name": pet_name,
+        "pet_type": pet_type,
+        "story_mode": story_mode,
+        "genre": genre,
+        "duration_ms": int(duration_ms) if duration_ms is not None else 0,
+        "status": status,
+        "error_msg": error_msg or ""
+    }
+    
+    try:
+        with open(USAGE_LOG_FILE, "a", encoding="utf-8") as f:
+            f.write(json.dumps(log_data, ensure_ascii=False) + "\n")
+    except Exception as e:
+        print(f"Failed to write usage log: {e}")
+
+def load_all_profiles():
+    profiles = []
+    # pet_profile_*.json にマッチするファイルをすべて検索
+    files = glob.glob("pet_profile_*.json")
+    for filepath in files:
+        basename = os.path.basename(filepath)
+        u_id = basename.replace("pet_profile_", "").replace(".json", "")
+        # 本番デバッグ用などで user_id がない場合はスキップ
+        if not u_id: continue
+        
+        profile_data = load_json(filepath)
+        if profile_data and "name" in profile_data:
+            profile_data["user_id"] = u_id
+            # ファイルの更新日時を登録日時として取得
+            try:
+                mtime = os.path.getmtime(filepath)
+                tz_jst = datetime.timezone(datetime.timedelta(hours=9))
+                dt = datetime.datetime.fromtimestamp(mtime, tz_jst)
+                profile_data["registered_at"] = dt.strftime("%Y-%m-%d %H:%M:%S")
+            except:
+                profile_data["registered_at"] = "不明"
+            profiles.append(profile_data)
+            
+    # 登録日時の降順でソート
+    try:
+        profiles.sort(key=lambda x: x.get("registered_at", ""), reverse=True)
+    except:
+        pass
+    return profiles

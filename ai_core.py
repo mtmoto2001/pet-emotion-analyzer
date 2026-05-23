@@ -204,3 +204,30 @@ def run_ai_factory(google_key, pet_info, temp_file_path, story_mode, genre, prog
 
     finally:
         pass
+
+def run_lightweight_test(google_key):
+    """
+    Gemini APIへの軽量な接続確認テスト
+    """
+    import requests
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={google_key}"
+    payload = {
+        "contents": [
+            {
+                "parts": [
+                    {"text": "こんにちは、接続テストです。応答として、絵文字を含めた短い挨拶を1単語で日本語で出力してください。"}
+                ]
+            }
+        ],
+        "generationConfig": {
+            "temperature": 0.2
+        }
+    }
+    res_gemini = requests.post(gemini_url, json=payload, timeout=15)
+    if res_gemini.status_code != 200:
+        raise RuntimeError(f"Gemini APIエラー: HTTP {res_gemini.status_code} / {res_gemini.text}")
+    res_data = res_gemini.json()
+    try:
+        return res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
+    except Exception as e:
+        raise RuntimeError(f"レスポンスのパースエラー: {e}")
