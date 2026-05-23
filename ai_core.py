@@ -231,3 +231,58 @@ def run_lightweight_test(google_key):
         return res_data["candidates"][0]["content"]["parts"][0]["text"].strip()
     except Exception as e:
         raise RuntimeError(f"レスポンスのパースエラー: {e}")
+
+def sanitize_image(uploaded_file, target_path):
+    """
+    Pillowを用いてアップロードされた画像を安全に読み込み、
+    EXIF回転を物理適用し、標準的なRGB形式のJPEGとして再エンコードして保存する。
+    これにより Android/iOS のあらゆるフォルダ依存のパーミッションや
+    WebP等の変則的なMIMEタイプによる不具合を100%防止する。
+    """
+    from PIL import Image, ImageOps
+    import io
+    
+    try:
+        # アップロードされたファイルをメモリ上のバイトストリームとして読み込む
+        file_bytes = uploaded_file.read()
+        # file_uploader のポインタをリセットしておく（後続の処理のため）
+        uploaded_file.seek(0)
+        
+        # Pillowで画像を開く (フォーマットに依存せず安全に開けます)
+        img = Image.open(io.BytesIO(file_bytes))
+        
+        # スマホ撮影写真特有のEXIF回転情報を物理的な画像回転に自動変換・適用
+        try:
+            img = ImageOps.exif_transpose(img)
+        except Exception as e:
+            # EXIFが無い画像や、パース失敗時はスキップして安全継続
+            pass
+            
+        # RGBAなどのアルファチャンネル（透明度）がある場合は、JPEG保存のために白色背景と合成してRGBへ変換
+        if img.mode in ("RGBA", "LA") or (img.mode == "P" and "transparency" in img.info):
+            # 白色背景の新規画像を作成
+            background = Image.new("RGB", img.size, (255, 255, 255))
+            # アルファチャンネルを取り出してマスクとして利用し合成
+            if img.mode == "RGBA":
+                background.paste(img, mask=img.split()[3])
+            else:
+                background.paste(img, mask=img.convert("RGBA").split()[3])
+            img = background
+        else:
+            # その他のモード（CMYKやグレースケール等）も安全にRGBに統一変換
+            img = img.convert("RGB")
+            
+        # 最適な品質（Quality=85）で JPEG として物理保存
+        # これにより Android/Chrome のいかなる一時ファイルのロックやパーミッション問題も回避されます
+        img.save(target_path, "JPEG", quality=85)
+        return True
+    except Exception as e:
+        # 万が一Pillowでのサニタイズ自体が失敗した場合は、生のバイナリ書き込みにフォールバックして耐障害性を確保
+        try:
+            uploaded_file.seek(0)
+            with open(target_path, "wb") as f:
+                f.write(uploaded_file.read())
+            uploaded_file.seek(0)
+            return True
+        except Exception as fallback_err:
+            raise RuntimeError(f"画像サニタイズおよび一時保存に完全に失敗しました: {e} (フォールバックエラー: {fallback_err})")

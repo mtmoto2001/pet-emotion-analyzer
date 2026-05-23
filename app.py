@@ -150,6 +150,27 @@ def render_admin_dashboard():
                     st.rerun()
                 except Exception as e: st.error(f"エラー: {e}")
 
+def mask_error_message(err_msg):
+    """
+    英語の機械的なAPIエラーや例外メッセージを、
+    一般世帯のユーザー（美咲さん等）に不安を与えない極めて優しい日本語にマスク・翻訳する。
+    """
+    err_str = str(err_msg).lower()
+    
+    if "429" in err_str or "quota" in err_str or "exhausted" in err_str or "rate limit" in err_str:
+        return "ただいまアクセスが少し混み合っています🐾 1分ほど時間を置いて、もう一度ゆっくり試してみてくださいね。"
+        
+    if "api key" in err_str or "api_key" in err_str or "unauthorized" in err_str or "403" in err_str:
+        return "ただいまシステム設定を準備中です🐾 アプリの管理者に連絡してください。"
+        
+    if "timeout" in err_str or "timed out" in err_str:
+        return "インターネットの通信が少し不安定なようです🐾 電波の良い場所で、もう一度思い出をアップロードしてみてください。"
+        
+    if "invalid image" in err_str or "decode" in err_str or "format" in err_str or "sanitize" in err_str:
+        return "写真の読み込みがうまくいかなかったようです🐾 別の写真を選び直して、もう一度お試しください。"
+        
+    return "思い出の読み込み中に少しエラーが起きてしまいました🐾 もう一度だけ「思い出のストーリーをつくる」を押してみてください。"
+
 # --- ページ設定 ---
 st.set_page_config(page_title="うちのコ日常アルバム - Pet Daily AI", page_icon="🐾", layout="wide")
 
@@ -182,135 +203,167 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&display=swap');
     
     /* ベースリセット ＆ スマートフォン最適化 */
-    html, body, [data-testid="stAppViewContainer"] {
-        font-family: 'Noto Sans JP', sans-serif;
-        background-color: #0F172A; /* 深みのあるロイヤルダークブルー */
+    html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+        font-family: 'Noto Sans JP', sans-serif !important;
+        background-color: #0B0F19 !important; /* より深みのある神秘的なダークネイビー */
+        color: #F8FAFC !important;
     }
     
-    /* プレミアムグラデーションタイトル */
+    /* 極上さくらピンクゴールドのグラデーションタイトル */
     .main-title {
-        background: linear-gradient(45deg, #FF7B93, #FFB88C);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-weight: 700;
-        font-size: 2.2rem !important; /* スマホで折れ曲がらないよう少し縮小 */
-        margin-bottom: 0.1rem;
-        text-align: center;
+        background: linear-gradient(135deg, #FF7B93 0%, #FFB88C 100%) !important;
+        -webkit-background-clip: text !important;
+        -webkit-text-fill-color: transparent !important;
+        font-weight: 700 !important;
+        font-size: 2.1rem !important; /* スマホに完全フィットする大きさ */
+        margin-bottom: 0.2rem !important;
+        text-align: center !important;
+        letter-spacing: -0.5px;
     }
     .sub-title {
-        color: #94A3B8;
-        font-size: 0.95rem;
-        margin-bottom: 1.5rem;
-        text-align: center;
-        line-height: 1.5;
+        color: #94A3B8 !important;
+        font-size: 0.92rem !important;
+        margin-bottom: 1.8rem !important;
+        text-align: center !important;
+        line-height: 1.6 !important;
     }
     
-    /* ガラスモーフィズム・透過角丸プレミアムカード */
+    /* プレミアムガラスモーフィズムカード (PWAネイティブ感) */
     .status-card {
-        background: rgba(30, 41, 59, 0.7) !important;
-        backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
-        padding: 1.2rem;
-        border-radius: 16px;
-        margin-bottom: 1rem;
-        border: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+        background: rgba(30, 41, 59, 0.85) !important; /* 透過度を絶妙に上げて不具合時も文字が浮き立つように */
+        backdrop-filter: blur(16px) !important;
+        -webkit-backdrop-filter: blur(16px) !important;
+        padding: 1.2rem !important;
+        border-radius: 18px !important;
+        margin-bottom: 1.2rem !important;
+        border: 1px solid rgba(255, 255, 255, 0.08) !important;
+        box-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.3) !important;
     }
     
-    /* 超高コントラスト読書 preview ボックス (スマホ最適化) */
+    /* 超高コントラスト読書 preview ボックス (文芸誌風) */
     .line-preview-box { 
-        background-color: #0F172A !important; 
+        background-color: #0B0F19 !important; 
         border-left: 5px solid #FF7B93 !important; 
-        border-radius: 12px; 
-        padding: 1.2rem; 
-        margin-top: 0.8rem; 
+        border-radius: 14px !important; 
+        padding: 1.4rem !important; 
+        margin-top: 1rem !important; 
         color: #F8FAFC !important; 
-        white-space: pre-wrap; 
-        font-size: 1.02rem; 
-        line-height: 1.8;
-        box-shadow: inset 0 2px 8px rgba(0,0,0,0.5), 0 4px 12px rgba(0,0,0,0.15);
-        border: 1px solid rgba(255,255,255,0.05);
+        white-space: pre-wrap !important; 
+        font-size: 1.05rem !important; 
+        line-height: 1.9 !important;
+        box-shadow: inset 0 2px 10px rgba(0,0,0,0.6), 0 4px 15px rgba(0,0,0,0.2);
+        border: 1px solid rgba(255,255,255,0.04) !important;
     }
     
-    /* 入力フォームのスマホ最適化 */
+    /* 親しみやすい透過入力フォーム */
     div[data-testid="stForm"] {
-        background: rgba(30, 41, 59, 0.55) !important;
-        backdrop-filter: blur(10px);
-        border-radius: 20px !important;
-        border: 1px solid rgba(255,255,255,0.07) !important;
-        padding: 1.5rem !important;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+        background: rgba(30, 41, 59, 0.6) !important;
+        backdrop-filter: blur(12px) !important;
+        -webkit-backdrop-filter: blur(12px) !important;
+        border-radius: 24px !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        padding: 1.6rem !important;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.3) !important;
     }
     
-    /* モバイルの親指にフィットする大きめのタッチ領域 */
+    /* 🐾 写真フレーム風カスタムアップローダー (標準の退屈なUIを劇的リメイク) */
+    div[data-testid="stFileUploader"] {
+        border: 2px dashed rgba(255, 123, 147, 0.45) !important;
+        background: rgba(15, 23, 42, 0.5) !important;
+        border-radius: 18px !important;
+        padding: 1.2rem !important;
+        text-align: center !important;
+        transition: all 0.3s ease !important;
+        box-shadow: inset 0 2px 8px rgba(0,0,0,0.2) !important;
+    }
+    div[data-testid="stFileUploader"]:hover {
+        border-color: rgba(255, 123, 147, 0.8) !important;
+        background: rgba(15, 23, 42, 0.7) !important;
+    }
+    div[data-testid="stFileUploader"] section {
+        padding: 0 !important;
+        background: transparent !important;
+    }
+    div[data-testid="stFileUploader"] label {
+        color: #FFB88C !important;
+        font-weight: bold !important;
+        font-size: 1rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    /* タッチミスを防ぐ大きくて美しい親指ファーストボタン */
     .stButton>button {
         background: linear-gradient(135deg, #FF7B93 0%, #FFB88C 100%) !important;
         color: white !important;
-        font-weight: bold !important;
+        font-weight: 700 !important;
         border: none !important;
-        border-radius: 12px !important;
-        padding: 0.9rem 2rem !important;
-        transition: transform 0.1s ease, box-shadow 0.2s ease !important;
+        border-radius: 14px !important;
+        padding: 0.95rem 2rem !important;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         width: 100% !important;
         font-size: 1.1rem !important;
-        cursor: pointer;
-        box-shadow: 0 4px 15px rgba(255, 123, 147, 0.3);
+        cursor: pointer !important;
+        box-shadow: 0 6px 20px rgba(255, 123, 147, 0.35) !important;
+        letter-spacing: 0.5px;
     }
     .stButton>button:active {
-        transform: scale(0.98);
-        box-shadow: 0 2px 8px rgba(255, 123, 147, 0.2);
+        transform: scale(0.97) !important;
+        box-shadow: 0 3px 10px rgba(255, 123, 147, 0.2) !important;
     }
     
-    /* 全画面ローディングオーバーレイ */
+    /* スマホ画面絶対固定・全画面ローディングオーバーレイ (アドレスバー伸縮対応) */
     .full-screen-loader {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        background-color: rgba(15, 23, 42, 0.97); /* 深みのあるロイヤルダーク背景で100%覆う */
-        z-index: 999999 !important;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 2rem;
-        box-sizing: border-box;
-        animation: loaderFadeIn 0.3s ease-out forwards;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        bottom: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background-color: rgba(11, 15, 25, 0.98) !important; /* 完全に覆い隠す */
+        z-index: 9999999 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 1.5rem !important;
+        box-sizing: border-box !important;
     }
     .loader-card {
-        text-align: center;
-        max-width: 480px;
-        width: 100%;
-        background: rgba(30, 41, 59, 0.6);
-        border: 1px solid rgba(255,255,255,0.1);
-        padding: 2rem;
-        border-radius: 24px;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-        backdrop-filter: blur(15px);
+        text-align: center !important;
+        max-width: 440px !important;
+        width: 100% !important;
+        background: rgba(30, 41, 59, 0.75) !important;
+        border: 1px solid rgba(255,255,255,0.08) !important;
+        padding: 2.2rem 1.8rem !important;
+        border-radius: 28px !important;
+        box-shadow: 0 25px 60px rgba(0,0,0,0.6) !important;
+        backdrop-filter: blur(20px) !important;
+        -webkit-backdrop-filter: blur(20px) !important;
     }
     .loading-video {
-        width: 100%;
-        max-width: 320px;
-        border-radius: 18px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-        border: 2px solid rgba(255, 255, 255, 0.15);
-        margin-bottom: 1.5rem;
-    }
-    @keyframes loaderFadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
+        width: 100% !important;
+        max-width: 280px !important;
+        border-radius: 20px !important;
+        box-shadow: 0 15px 35px rgba(0,0,0,0.5) !important;
+        border: 2px solid rgba(255, 255, 255, 0.12) !important;
+        margin-bottom: 1.8rem !important;
     }
     
-    /* モバイルでの左右パディングの強制縮小 */
+    /* レスポンシブ強制適用 (どの端末でも比率を完全に均一化) */
     @media (max-width: 768px) {
         .block-container {
-            padding-left: 0.8rem !important;
-            padding-right: 0.8rem !important;
-            padding-top: 1.5rem !important;
+            padding-left: 0.6rem !important;
+            padding-right: 0.6rem !important;
+            padding-top: 1.2rem !important;
         }
         .main-title {
-            font-size: 1.9rem !important;
+            font-size: 1.85rem !important;
+        }
+        .line-preview-box {
+            padding: 1.1rem !important;
+            font-size: 0.98rem !important;
+            line-height: 1.8 !important;
         }
     }
 </style>
@@ -615,13 +668,27 @@ with col1:
             temp_file_path = os.path.join(temp_dir, f"{uuid.uuid4().hex}{ext}")
             
             p_bar.progress(10)
-            p_text.info("📥 思い出のファイルを準備しています...")
+            p_text.info("📥 思い出の写真を綺麗に準備しています...")
             
-            with open(temp_file_path, "wb") as f:
-                while True:
-                    chunk = uploaded_file.read(4096)
-                    if not chunk: break
-                    f.write(chunk)
+            try:
+                # どんな端末・フォルダからの画像データでも安全にデコードして標準JPEGにサニタイズ保存
+                ai_core.sanitize_image(uploaded_file, temp_file_path)
+            except Exception as e_sanitize:
+                err_msg = mask_error_message(e_sanitize)
+                st.error(err_msg)
+                data_manager.log_usage(
+                    user_id=user_id,
+                    pet_name=saved_profile.get("name", "不明"),
+                    pet_type=saved_profile.get("pet_type", "不明"),
+                    story_mode=story_mode,
+                    genre=genre if story_mode == "絵本小説風（客観的な視点から）" else "おしゃべり風",
+                    duration_ms=0,
+                    status="ERROR",
+                    error_msg=f"Sanitize failed: {e_sanitize}"
+                )
+                p_bar.empty()
+                p_text.empty()
+                st.stop()
             
             try:
                 loading_placeholder = st.empty()
@@ -679,7 +746,8 @@ with col1:
                         # 一般ユーザーの場合はLINEステータスを出さず、メッセージ自体を格納しない
                         st.session_state.pop('line_status', None)
                 else:
-                    st.error(prompt_res)
+                    masked_err = mask_error_message(prompt_res)
+                    st.error(masked_err)
                     # ログの記録 (失敗)
                     data_manager.log_usage(
                         user_id=user_id,
