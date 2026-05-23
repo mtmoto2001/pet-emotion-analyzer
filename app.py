@@ -54,28 +54,115 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# --- 使い方チュートリアルダイアログの定義 ---
+@st.dialog("📖 うちのコ日常アルバム 使い方ガイド")
+def show_tutorial_dialog():
+    st.write("アプリの使い方を紙芝居形式で分かりやすくガイドします。上のタブを切り替えてお読みください🐾")
+    
+    tab1, tab2, tab3, tab4 = st.tabs(["👋 ようこそ！", "💡 基本の使い方", "🎨 4コマ漫画の作り方", "📱 アプリアイコン化"])
+    
+    with tab1:
+        st.markdown("""
+        ### ようこそ！『うちのコ日常アルバム』へ 🐾
+        このアプリは、愛するペットのお気に入りの写真から**「ペットの本当の気持ち（心の声）」**や**「特別な思い出ショートストーリー」**を最先端AI（Gemini）がつむぐアルバムアプリです。
+        
+        さらに、そのストーリーをベースにした**「超高品質な4コマ漫画」**をChatGPTで作成できる魔法のプロンプトを生成します！
+        
+        まずは右上の「基本の使い方」タブをタップしてみましょう ➡
+        """)
+        st.info("💡 登録されたペットの性格や年齢に合わせて、AIが世界に一つだけのストーリーを執筆します。")
+        
+    with tab2:
+        st.markdown("""
+        ### 💡 アプリの基本の使い方（簡単3ステップ）
+        
+        1. **📸 写真のアップロード**:
+           画面の左側で、おうちのコのお気に入りの写真（JPEG/PNG形式）を1枚アップロードします。
+        2. **📚 小説スタイルの選択**:
+           客観的に描く『絵本小説風（6つのジャンル選択可能）』か、ペット本人が語りかける『おしゃべり風』から選択します。
+        3. **⚡ ストーリーをつくる**:
+           「思い出のストーリーをつくる」ボタンを押して数十秒待つと、画面右側に心情分析と小説が完成します！
+        """)
+        st.success("✨ 動画アップロードには非対応です。お写真をお使いください！")
+        
+    with tab3:
+        st.markdown("""
+        ### 🎨 4コマ漫画のつくり方（ChatGPT連携）
+        ストーリー生成後に画面右側に出力されるプロンプトを使い、ChatGPTで最高品質の4コマ漫画を生成します。
+        
+        1. **📋 コピーボタンをタップ**:
+           プロンプト欄のすぐ下にある **「プロンプトをコピーする」** ボタンをタップします（クリップボードに記憶されます）。
+        2. **🚀 ChatGPTを起動**:
+           その下にある **「ChatGPTで4コマ漫画生成」** ボタンをタップして、ChatGPT（DALL-E 3）の画面を開きます。
+        3. **📝 貼り付けて送信するだけ！**:
+           ChatGPTのチャット入力欄にコピーしたプロンプトを**そのまま貼り付けて送信**してください。
+           自動的に、あなたのコの特徴や表情を100%引き継いだ、感動的な4コマ漫画が目の前で描き出されます！
+        """)
+        st.warning("⚠️ ChatGPT側で画像が生成されるまで1〜2分かかります。そのまま楽しみにお待ちください！")
+        
+    with tab4:
+        st.markdown("""
+        ### 📱 スマートフォンのホーム画面にアプリアイコンを作る方法
+        このWebアプリを、スマホのホーム画面にアプリアイコンとして登録することで、SafariやChromeの枠が消えて**本物のネイティブアプリ同様の全画面表示**で快適に起動できるようになります！
+        
+        * **🍎 iPhone (Safariの場合)**:
+          1. Safariでこのアプリを開きます。
+          2. 下部の **「共有ボタン」**（四角から矢印が出ているアイコン）をタップします。
+          3. **「ホーム画面に追加」** をタップして、右上の「追加」を押します。
+        * **🤖 Android (Chromeの場合)**:
+          1. Chromeでこのアプリを開きます。
+          2. 右上の **「三点リーダー（メニュー）」** をタップします。
+          3. **「ホーム画面に追加」** または **「アプリをインストール」** をタップします。
+        """)
+        st.info("🐾 ホーム画面に追加すると、次回からホーム画面の可愛い肉球アイコン（🐾）をタップするだけで一瞬で起動します！")
+
+    if st.button("ガイドを閉じる", key="btn_close_tutorial", use_container_width=True):
+        st.rerun()
+
+# --- データの読み込み ---
 saved_config = data_manager.load_config(user_id)
 saved_profile = data_manager.load_profile(user_id)
 
+# --- 登録完了後に自動でチュートリアルを表示する処理 ---
+if st.session_state.get("show_tutorial_after_reg"):
+    st.session_state.pop("show_tutorial_after_reg")
+    show_tutorial_dialog()
+
 st.markdown('<p class="main-title">🐾 うちのコ日常アルバム</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-title">お気に入りの写真や動画から、愛犬・愛猫の心の声と特別な4コマストーリーをつむぐアルバムアプリ</p>', unsafe_allow_html=True)
+st.markdown('<p class="sub-title">お気に入りの写真から、愛犬・愛猫の心の声と特別な4コマストーリーをつむぐアルバムアプリ</p>', unsafe_allow_html=True)
 
 with st.sidebar:
-    st.markdown("### 🛠️ システム設定")
-    input_line = st.text_input("💬 LINEアクセストークン", value=saved_config.get("LINE_CHANNEL_ACCESS_TOKEN", ""), type="password", key="root_lt_id")
-    input_google = st.text_input("🔑 Google Gemini APIキー", value=saved_config.get("GOOGLE_API_KEY", ""), type="password", key="root_gk_id")
+    # 📖 使い方ガイドボタンをサイドバーの最上部に設置
+    st.markdown("### 📖 ナビゲーション")
+    if st.button("📖 アプリの使い方（チュートリアル）", key="btn_show_tutorial_global", use_container_width=True):
+        show_tutorial_dialog()
     
-    if st.button("💾 設定を保存する", key="btn_save_root_config"):
-        data_manager.save_config(input_line, input_google, user_id)
-        st.success("設定を保存しました。")
-        st.rerun()
-
     st.write("---")
-    st.markdown("### 📡 送信設定")
-    line_switch = st.checkbox("🟢 LINEに自動で送る", value=False, key="root_switch_ls_id")
+
+    # 管理者用パラメータチェック (?admin=true がある場合のみシステム設定を表示)
+    is_admin = st.query_params.get("admin") == "true"
     
-    if saved_profile:
+    if is_admin:
+        st.markdown("### 🛠️ システム設定（管理者専用）")
+        input_line = st.text_input("💬 LINEアクセストークン", value=saved_config.get("LINE_CHANNEL_ACCESS_TOKEN", ""), type="password", key="root_lt_id")
+        input_google = st.text_input("🔑 Google Gemini APIキー", value=saved_config.get("GOOGLE_API_KEY", ""), type="password", key="root_gk_id")
+        
+        if st.button("💾 設定を保存する", key="btn_save_root_config"):
+            data_manager.save_config(input_line, input_google, user_id)
+            st.success("設定を保存しました。")
+            st.rerun()
+
         st.write("---")
+        st.markdown("### 📡 送信設定")
+        line_switch = st.checkbox("🟢 LINEに自動で送る", value=False, key="root_switch_ls_id")
+        st.write("---")
+    else:
+        # 一般ユーザーはLINE自動送信はOFF固定、APIキーはSecretsから読み込んだ値をバインド
+        input_line = saved_config.get("LINE_CHANNEL_ACCESS_TOKEN", "")
+        input_google = saved_config.get("GOOGLE_API_KEY", "")
+        line_switch = False
+
+    if saved_profile:
         st.markdown("### 📝 登録されているペットの情報")
         st.markdown(f"""
         <div class="status-card">
@@ -151,7 +238,8 @@ def show_profile_dialog():
             "age_display": age_display
         }
         data_manager.save_profile(profile_data, user_id)
-        st.success("登録が完了しました！")
+        st.session_state["show_tutorial_after_reg"] = True
+        st.success("登録が完了しました！使い方ガイドを表示します。")
         st.rerun()
 
 # データがなければダイアログを強制表示
@@ -161,7 +249,7 @@ if not saved_profile:
 col1, col2 = st.columns([1, 1], gap="large")
 
 with col1:
-    st.markdown("### 🎬 思い出のメディアとストーリーの選択")
+    st.markdown("### 🎬 思い出の写真とストーリーの選択")
     
     with st.form(key="secure_capsule_form_v7"):
         story_mode = st.radio("📝 ストーリーのスタイルを選んでください", ["絵本小説風（客観的な視点から）", "おしゃべり風（うちのコの一人称で）"], horizontal=True, key="sm_sel_v7")
@@ -176,7 +264,6 @@ with col1:
                 key="novel_genre_selectbox"
             )
             
-        # テストモードはUIから完全に隠蔽（バックエンドのみ：APIは本番環境の無料枠保護のため）
         uploaded_file = st.file_uploader("愛犬・愛猫の写真ファイルをアップロードしてください（.jpg / .jpeg / .png）", type=["jpg", "jpeg", "png"], key="fu_native_v7")
         submit_button = st.form_submit_button(label="⚡️ 思い出のストーリーをつくる")
     
@@ -190,9 +277,9 @@ with col1:
         st.session_state.pop('display_prompt', None)
         
         if not GOOGLE_API_KEY:
-            st.error("Google Gemini APIキーが未設定です。サイドバーからAPIキーを登録して保存してください。")
+            st.error("Google Gemini APIキーが未設定です。管理者アカウントからAPIキーを登録して保存してください。")
         elif uploaded_file is None:
-            st.warning("思い出の写真または動画ファイルを選んでアップロードしてください。")
+            st.warning("思い出の写真ファイルを選んでアップロードしてください。")
         elif not saved_profile:
             st.error("ペットの情報が登録されていません。")
         else:
@@ -340,7 +427,7 @@ with col2:
         st.link_button("🚀 ChatGPTで4コマ漫画生成", "https://chatgpt.com/", use_container_width=True)
         
     else:
-        st.info("左側でメディアをセットし、ボタンを押すと進捗バーが走り出し、完了後にここに心情分析と小説、そして4コマ漫画プロンプトが生成されます。")
+        st.info("左側で写真をセットし、ボタンを押すと進捗バーが走り出し、完了後にここに心情分析と小説、そして4コマ漫画プロンプトが生成されます。")
 
 st.write("---")
 st.caption("With Love and Warmth — Powered by Gemini 2.5 Flash & NanoBanana (Imagen 3) Architecture")

@@ -24,7 +24,21 @@ def get_profile_filepath(user_id=None):
     return f"pet_profile_{user_id}.json" if user_id else PROFILE_FILE
 
 def load_config(user_id=None): 
-    return load_json(get_config_filepath(user_id))
+    config = load_json(get_config_filepath(user_id))
+    # If the user-specific config is empty or missing, try to fallback to Streamlit secrets (Master Admin keys)
+    if not config or not config.get("GOOGLE_API_KEY"):
+        try:
+            import streamlit as st
+            if hasattr(st, "secrets"):
+                fallback = {
+                    "LINE_CHANNEL_ACCESS_TOKEN": st.secrets.get("LINE_CHANNEL_ACCESS_TOKEN", ""),
+                    "GOOGLE_API_KEY": st.secrets.get("GOOGLE_API_KEY", "")
+                }
+                if fallback.get("GOOGLE_API_KEY"):
+                    return fallback
+        except:
+            pass
+    return config
 
 def save_config(l_token, google_key, user_id=None): 
     save_json(get_config_filepath(user_id), {"LINE_CHANNEL_ACCESS_TOKEN": l_token, "GOOGLE_API_KEY": google_key})
