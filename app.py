@@ -27,6 +27,22 @@ if "user_id" not in st.query_params:
 
 user_id = st.query_params["user_id"]
 
+# --- LocalStorage からのペット情報復元処理 ---
+if "restore_profile" in st.query_params:
+    import urllib.parse
+    import json
+    try:
+        raw_val = st.query_params["restore_profile"]
+        profile_json = urllib.parse.unquote(raw_val)
+        profile_data = json.loads(profile_json)
+        if profile_data and "name" in profile_data:
+            # サーバー側に保存してセッションを復元
+            data_manager.save_profile(profile_data, user_id)
+            st.query_params.pop("restore_profile")
+            st.rerun()
+    except Exception as e:
+        pass
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&display=swap');
@@ -123,6 +139,30 @@ def show_tutorial_dialog():
 saved_config = data_manager.load_config(user_id)
 saved_profile = data_manager.load_profile(user_id)
 
+# サーバー側にプロフィールが無い場合、ブラウザの LocalStorage からの復元を試みるJSを埋め込み
+if not saved_profile:
+    restore_js = """
+    <script>
+    try {
+        const profile = localStorage.getItem("pet_profile");
+        if (profile) {
+            const parsed = JSON.parse(profile);
+            if (parsed && parsed.name) {
+                const encoded = encodeURIComponent(profile);
+                const parentUrl = new URL(window.parent.location.href);
+                if (!parentUrl.searchParams.has("restore_profile")) {
+                    parentUrl.searchParams.set("restore_profile", encoded);
+                    window.parent.location.href = parentUrl.toString();
+                }
+            }
+        }
+    } catch(e) {
+        console.error("LocalStorage restore failed:", e);
+    }
+    </script>
+    """
+    components.html(restore_js, height=0, width=0)
+
 # --- 登録完了後に自動でチュートリアルを表示する処理 ---
 if st.session_state.get("show_tutorial_after_reg"):
     st.session_state.pop("show_tutorial_after_reg")
@@ -130,6 +170,21 @@ if st.session_state.get("show_tutorial_after_reg"):
 
 st.markdown('<p class="main-title">🐾 うちのコ日常アルバム</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-title">お気に入りの写真から、愛犬・愛猫の心の声と特別な4コマストーリーをつむぐアルバムアプリ</p>', unsafe_allow_html=True)
+
+# --- LocalStorageへの保存トリガーJSの出力 ---
+if "save_profile_to_localstorage" in st.session_state:
+    profile_to_save = st.session_state.pop("save_profile_to_localstorage")
+    import json
+    save_js = f"""
+    <script>
+    try {{
+        localStorage.setItem("pet_profile", `{json.dumps(profile_to_save, ensure_ascii=False)}`);
+    }} catch(e) {{
+        console.error("LocalStorage save failed:", e);
+    }}
+    </script>
+    """
+    components.html(save_js, height=0, width=0)
 
 with st.sidebar:
     # 📖 使い方ガイドボタンをサイドバーの最上部に設置
@@ -148,7 +203,7 @@ with st.sidebar:
         input_google = st.text_input("🔑 Google Gemini APIキー", value=saved_config.get("GOOGLE_API_KEY", ""), type="password", key="root_gk_id")
         
         if st.button("💾 設定を保存する", key="btn_save_root_config"):
-            data_manager.save_config(input_line, input_google, user_id)
+            data_manager.save_config(input_line, input_google)
             st.success("設定を保存しました。")
             st.rerun()
 
@@ -186,6 +241,7 @@ with st.sidebar:
                 updated_data = saved_profile.copy()
                 updated_data.update({"name": edit_name, "pet_type": edit_type, "breed": edit_breed, "color": edit_color, "gender": edit_gender, "owner_call": edit_owner})
                 data_manager.save_profile(updated_data, user_id)
+                st.session_state["save_profile_to_localstorage"] = updated_data
                 st.success("ペット情報を更新しました。")
                 st.rerun()
 
@@ -238,6 +294,7 @@ def show_profile_dialog():
             "age_display": age_display
         }
         data_manager.save_profile(profile_data, user_id)
+        st.session_state["save_profile_to_localstorage"] = profile_data
         st.session_state["show_tutorial_after_reg"] = True
         st.success("登録が完了しました！使い方ガイドを表示します。")
         st.rerun()
@@ -277,7 +334,10 @@ with col1:
         st.session_state.pop('display_prompt', None)
         
         if not GOOGLE_API_KEY:
-            st.error("Google Gemini APIキーが未設定です。管理者アカウントからAPIキーを登録して保存してください。")
+            if is_admin:
+                st.error("Google Gemini APIキーが未設定です。上の管理者設定から登録して保存してください。")
+            else:
+                st.error("システム設定エラーが発生しました。時間を置いて再度お試しいただくか、開発者にお問い合わせください🐾")
         elif uploaded_file is None:
             st.warning("思い出の写真ファイルを選んでアップロードしてください。")
         elif not saved_profile:
@@ -350,13 +410,17 @@ with col1:
                     st.session_state['display_image'] = uploaded_file.read()
                     st.session_state['display_mime'] = uploaded_file.type
                     
-                    if line_switch:
+                    # LINE自動送信は管理者セッション（is_admin=True）かつスイッチONの場合のみ実行
+                    if is_admin and line_switch:
                         # LINE配信用テキストの構築
                         line_text = f"🐾 【{saved_profile['name']}ちゃんの日常心情分析】\n{feelings_res}\n\n📖 【思い出ストーリー】\n{story_res}\n\n🎨 【GPT用4コマ漫画生成プロンプト】\n{prompt_res}"
                         status = line_api.send_to_line_broadcast(LINE_CHANNEL_ACCESS_TOKEN, line_text, prompt_res)
                         st.session_state['line_status'] = status
-                    else:
+                    elif is_admin:
                         st.session_state['line_status'] = "ℹ️ LINE自動送信はOFFです。ローカル画面のみに出力しました。"
+                    else:
+                        # 一般ユーザーの場合はLINEステータスを出さず、メッセージ自体を格納しない
+                        st.session_state.pop('line_status', None)
                 else:
                     st.error(prompt_res)
             finally:
