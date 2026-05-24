@@ -343,29 +343,49 @@ st.markdown("""
         margin-bottom: 0.5rem !important;
     }
     
-    /* タッチミスを防ぐ大きくて美しい親指ファーストボタン (サクラローズゴールド + 高コントラストココアブラウン文字) */
-    .stButton>button {
-        background: linear-gradient(135deg, #FF8096 0%, #FFA87D 100%) !important;
-        color: #3D2D2D !important;
+    /* ボタンの色デザインの統一 (背景薄い灰色、文字黒、枠線黒) */
+    .stButton>button,
+    div[data-testid="stFileUploader"] button {
+        background: #E5E5E5 !important;
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
         font-weight: 700 !important;
-        border: none !important;
-        border-radius: 14px !important;
+        cursor: pointer !important;
+        box-shadow: none !important;
+        text-shadow: none !important;
+        border-radius: 12px !important;
+    }
+    .stButton>button:hover,
+    div[data-testid="stFileUploader"] button:hover {
+        background: #D8D8D8 !important; /* ホバー時はわずかに暗い灰色 */
+        color: #000000 !important;
+        border: 1px solid #000000 !important;
+    }
+    
+    /* 「思い出のストーリーをつくる」ボタン専用のサイズ・配置調整 */
+    .stButton>button {
         padding: 0.95rem 2rem !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         width: 100% !important;
         font-size: 1.1rem !important;
-        cursor: pointer !important;
-        box-shadow: 0 6px 20px rgba(255, 128, 150, 0.3) !important;
         letter-spacing: 0.5px;
-        text-shadow: 0 1px 1px rgba(255,255,255,0.4);
-    }
-    .stButton>button:hover {
-        opacity: 0.95 !important;
-        box-shadow: 0 8px 25px rgba(255, 128, 150, 0.4) !important;
     }
     .stButton>button:active {
         transform: scale(0.97) !important;
-        box-shadow: 0 3px 10px rgba(255, 128, 150, 0.15) !important;
+    }
+    
+    /* ファイルアップロードボタン専用のサイズ調整・テキスト変更 (Browse files -> ファイルアップロード) */
+    div[data-testid="stFileUploader"] button {
+        padding: 0.55rem 1.4rem !important;
+        font-size: 0 !important;
+        transition: background-color 0.2s ease !important;
+    }
+    div[data-testid="stFileUploader"] button::after {
+        content: "ファイルアップロード" !important;
+        font-size: 0.9rem !important;
+        color: #000000 !important;
+        font-weight: 700 !important;
+        display: block !important;
     }
     
     /* フルスクリーンローディング (システムの背景色に同調) */
