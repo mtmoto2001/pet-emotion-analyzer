@@ -370,6 +370,62 @@ st.markdown("""
     section[data-testid="stSidebar"] * {
         color: #3D2D2D !important;
     }
+
+    /* Streamlitのネイティブ入力フィールドとテキストエリアの文字色と背景色を強制固定して視認性を確保 */
+    div[data-baseweb="input"] input, 
+    div[data-baseweb="textarea"] textarea,
+    .stTextArea textarea, 
+    .stTextInput input {
+        background-color: #FFFFFF !important;
+        color: #3D2D2D !important;
+        border: 1px solid rgba(255, 182, 193, 0.5) !important;
+    }
+    
+    /* セレクトボックスの文字色と背景色の強制固定 */
+    div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        color: #3D2D2D !important;
+    }
+    div[role="listbox"] li, div[role="option"] {
+        background-color: #FFFFFF !important;
+        color: #3D2D2D !important;
+    }
+    
+    /* アコーディオン・エキスパンダーのヘッダーと中身の視認性確保 */
+    div[data-testid="stExpander"] {
+        background-color: rgba(255, 255, 255, 0.8) !important;
+        border: 1px solid rgba(255, 182, 193, 0.4) !important;
+        border-radius: 14px !important;
+    }
+    div[data-testid="stExpander"] summary {
+        color: #FF8096 !important;
+        font-weight: bold !important;
+    }
+    div[data-testid="stExpander"] p,
+    div[data-testid="stExpander"] span,
+    div[data-testid="stExpander"] li {
+        color: #3D2D2D !important;
+    }
+
+    /* Streamlitネイティブのアラートボックス（st.info, st.warning, st.error, st.success）の文字色と背景色を強制指定 */
+    div[data-testid="stAlert"] {
+        background-color: #FFF0F2 !important;
+        border: 1px solid rgba(255, 182, 193, 0.5) !important;
+        border-radius: 14px !important;
+    }
+    div[data-testid="stAlert"] * {
+        color: #3D2D2D !important;
+    }
+
+    /* タブの文字色と背景色の強制指定 */
+    button[data-baseweb="tab"] {
+        color: #7D6363 !important;
+        font-weight: bold !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #FF8096 !important;
+        border-bottom-color: #FF8096 !important;
+    }
     
     /* レスポンシブ強制適用 (どの端末でも比率を完全に均一化) */
     @media (max-width: 768px) {
@@ -1119,8 +1175,8 @@ with col2:
         # --- スマホでもPCでも確実にコピー動作する、プロンプトテキスト＆コピペボタン併設の特別HTMLウィジェット ---
         html_copy_code = f"""
         <div style="display: flex; flex-direction: column; gap: 10px; width: 100%; height: 100%; box-sizing: border-box; font-family: sans-serif;">
-            <textarea id="promptText" style="width: 100%; height: 190px; background-color: #1A202C; color: #FFFFFF; border: 1px solid #4A5568; border-radius: 8px; padding: 10px; font-family: monospace; font-size: 14px; box-sizing: border-box; resize: none;" readonly>{manga_prompt_text}</textarea>
-            <button onclick="copyToClipboard()" style="background: linear-gradient(135deg, #FF7B93 0%, #FFB88C 100%); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; font-size: 15px; width: 100%; transition: opacity 0.2s;">📋 プロンプトをコピーする</button>
+            <textarea id="promptText" style="width: 100%; height: 190px; background-color: #FFFDFC; color: #3D2D2D; border: 1px solid rgba(255, 182, 193, 0.5); border-radius: 8px; padding: 10px; font-family: monospace; font-size: 14px; box-sizing: border-box; resize: none;" readonly>{manga_prompt_text}</textarea>
+            <button onclick="copyToClipboard()" style="background: linear-gradient(135deg, #FF8096 0%, #FFA87D 100%); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; font-size: 15px; width: 100%; transition: opacity 0.2s;">📋 プロンプトをコピーする</button>
         </div>
         <script>
         function copyToClipboard() {{
