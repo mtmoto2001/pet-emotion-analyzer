@@ -961,8 +961,28 @@ st.markdown("""
 def show_tutorial_dialog():
     st.write("アプリの使い方を紙芝居形式で分かりやすくガイドします。上のタブを切り替えてお読みください🐾")
     
-    tab1, tab2, tab3, tab4 = st.tabs(["👋 ようこそ！", "💡 基本の使い方", "🎨 4コマ漫画の作り方", "📱 アプリアイコン化"])
+    tab_video, tab1, tab2, tab3, tab4 = st.tabs(["🎬 動画で見る", "👋 ようこそ！", "💡 基本の使い方", "🎨 4コマ漫画の作り方", "📱 アプリアイコン化"])
     
+    with tab_video:
+        st.markdown("### 🎬 動画で見る使い方ガイド")
+        st.write("実際のスマートフォンの操作画面と流れを短い動画で解説します🐾")
+        
+        video_path = os.path.join(os.path.dirname(__file__), "tutorial_video.mp4")
+        if os.path.exists(video_path):
+            st.video(video_path)
+            st.success("🎥 再生ボタンを押して、実際の操作の流れを確認してください。")
+        else:
+            st.info("💡 **デモ操作動画の埋め込みに対応しました！**\n\nスマホでアプリの操作画面を録画（画面収録）し、ファイル名を `tutorial_video.mp4` にしてこのプロジェクトフォルダに配置するだけで、ユーザーがこの場所で分かりやすい操作解説動画を再生できるようになります🎥🐾")
+            st.markdown("""
+            <div style="background-color: #3D2D2D; color: #FFFFFF; padding: 2.5rem 1.5rem; border-radius: 16px; text-align: center; border: 2px dashed rgba(255, 128, 150, 0.4); margin: 1rem 0; box-shadow: 0 8px 24px rgba(0,0,0,0.1);">
+                <div style="font-size: 3rem; margin-bottom: 0.8rem;">🎬</div>
+                <h4 style="color: #FF8096; font-weight: bold; margin-top: 0; text-align: center;">解説動画プレースホルダー</h4>
+                <p style="font-size: 0.85rem; color: #E5E5E5; line-height: 1.5; max-width: 340px; margin: 0 auto; text-align: center;">
+                    実際のスマホ操作画面（ペット登録〜思い出生成など）を録画し、<code>tutorial_video.mp4</code> として配置するだけで自動的にここに動画プレイヤーが生成されます！
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            
     with tab1:
         st.markdown("""
         ### ようこそ！『うちのコ日常アルバム』へ 🐾
