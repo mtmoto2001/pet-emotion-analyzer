@@ -71,13 +71,15 @@ def render_admin_dashboard():
                 st.markdown("##### 🐶 世帯（ペット名）別の思い出生成頻度")
                 if "pet_name" in df_logs.columns:
                     active_users = df_logs.groupby(["user_id", "pet_name"]).size().reset_index(name="生成回数")
-                    active_users["表示名"] = active_users["pet_name"] + " (" + active_users["user_id"] + ")"
-                    st.bar_chart(active_users.set_index("表示名")["生成回数"], color="#00E6FF")
+                    df_display1 = active_users[["pet_name", "user_id", "生成回数"]].rename(columns={"pet_name": "ペットの名前", "user_id": "世帯ID"})
+                    st.dataframe(df_display1, use_container_width=True, hide_index=True)
             with g2:
                 st.markdown("##### 📚 人気の小説ジャンル")
                 if "genre" in df_logs.columns:
                     genre_counts = df_logs[df_logs["genre"] != ""]["genre"].value_counts()
-                    st.bar_chart(genre_counts, color="#FFB800")
+                    df_display2 = genre_counts.reset_index()
+                    df_display2.columns = ["小説ジャンル", "生成回数"]
+                    st.dataframe(df_display2, use_container_width=True, hide_index=True)
                     
     with tab_house:
         st.markdown("##### 🏡 登録世帯（10世帯PoC）のペットプロフィール一覧")
