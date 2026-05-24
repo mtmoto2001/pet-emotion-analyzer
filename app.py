@@ -345,6 +345,7 @@ st.markdown("""
     
     /* ボタンの色デザインの統一 (背景薄い灰色、文字黒、枠線黒) */
     .stButton>button,
+    div[data-testid="stFormSubmitButton"] button,
     div[data-testid="stFileUploader"] button {
         background: #E5E5E5 !important;
         color: #000000 !important;
@@ -356,21 +357,24 @@ st.markdown("""
         border-radius: 12px !important;
     }
     .stButton>button:hover,
+    div[data-testid="stFormSubmitButton"] button:hover,
     div[data-testid="stFileUploader"] button:hover {
         background: #D8D8D8 !important; /* ホバー時はわずかに暗い灰色 */
         color: #000000 !important;
         border: 1px solid #000000 !important;
     }
     
-    /* 「思い出のストーリーをつくる」ボタン専用のサイズ・配置調整 */
-    .stButton>button {
+    /* 「思い出のストーリーをつくる」ボタン専用 of サイズ・配置調整 */
+    .stButton>button,
+    div[data-testid="stFormSubmitButton"] button {
         padding: 0.95rem 2rem !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         width: 100% !important;
         font-size: 1.1rem !important;
         letter-spacing: 0.5px;
     }
-    .stButton>button:active {
+    .stButton>button:active,
+    div[data-testid="stFormSubmitButton"] button:active {
         transform: scale(0.97) !important;
     }
     
