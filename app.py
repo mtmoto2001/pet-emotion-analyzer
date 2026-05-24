@@ -131,6 +131,68 @@ def render_admin_dashboard():
         if df_logs.empty:
             st.info("ストーリーが生成されると、ここにグラフ分析がリアルタイム描画されます🐾")
         else:
+            # 昨日からの利用状況の計算 (Activity Since Yesterday)
+            tz_jst = datetime.timezone(datetime.timedelta(hours=9))
+            now_jst = datetime.datetime.now(tz_jst)
+            today_str = now_jst.strftime("%Y-%m-%d")
+            yesterday_str = (now_jst - datetime.timedelta(days=1)).strftime("%Y-%m-%d")
+            
+            yesterday_count = 0
+            today_count = 0
+            activity_since_yesterday = []
+            
+            if not df_logs.empty and "timestamp" in df_logs.columns:
+                for _, log in df_logs.iterrows():
+                    ts = log.get("timestamp", "")
+                    if ts:
+                        log_date = ts.split(" ")[0]
+                        if log_date == today_str:
+                            today_count += 1
+                            activity_since_yesterday.append(log)
+                        elif log_date == yesterday_str:
+                            yesterday_count += 1
+                            activity_since_yesterday.append(log)
+            
+            df_since_yesterday = pd.DataFrame(activity_since_yesterday)
+            
+            # 昨日・今日の生成回数を最上部に大きくカード表示
+            st.markdown("##### 📅 昨日からの利用状況 (Activity Since Yesterday)")
+            col_y1, col_y2 = st.columns(2)
+            with col_y1:
+                st.markdown(f"""
+                <div class="admin-card" style="border-left: 4px solid #FFA87D; text-align: center; padding: 1rem;">
+                    <div style="font-size: 1.6rem; font-weight: bold; color: #FFA87D;">{yesterday_count} 回</div>
+                    <div style="font-size: 0.85rem; color: #94A3B8;">昨日 ({yesterday_str}) の思い出生成数</div>
+                </div>
+                """, unsafe_allow_html=True)
+            with col_y2:
+                st.markdown(f"""
+                <div class="admin-card" style="border-left: 4px solid #FF8096; text-align: center; padding: 1rem;">
+                    <div style="font-size: 1.6rem; font-weight: bold; color: #FF8096;">{today_count} 回</div>
+                    <div style="font-size: 0.85rem; color: #94A3B8;">今日 ({today_str}) の思い出生成数</div>
+                </div>
+                """, unsafe_allow_html=True)
+            
+            st.markdown("##### 📝 昨日から今日にかけての利用アクティビティ生データ一覧")
+            if df_since_yesterday.empty:
+                st.info("昨日から今日にかけての利用履歴はまだありません🐾")
+            else:
+                existing_y_cols = [c for c in ["timestamp", "user_id", "pet_name", "pet_type", "story_mode", "genre", "duration_ms", "status"] if c in df_since_yesterday.columns]
+                display_y_cols = {
+                    "timestamp": "タイムスタンプ",
+                    "user_id": "世帯ID",
+                    "pet_name": "ペット名",
+                    "pet_type": "種別",
+                    "story_mode": "生成モード",
+                    "genre": "ジャンル",
+                    "duration_ms": "処理時間(ms)",
+                    "status": "ステータス"
+                }
+                df_since_yesterday_display = df_since_yesterday[existing_y_cols].rename(columns=display_y_cols)
+                df_since_yesterday_display = df_since_yesterday_display.sort_values(by="タイムスタンプ", ascending=False)
+                st.dataframe(df_since_yesterday_display, use_container_width=True, hide_index=True)
+            
+            st.write("---")
             g1, g2 = st.columns(2)
             with g1:
                 st.markdown("##### 🐶 世帯（ペット名）別の思い出生成頻度")
@@ -966,6 +1028,36 @@ saved_profile = data_manager.load_profile(user_id)
 # 管理者用パラメータチェック
 is_admin = st.query_params.get("admin") == "true"
 
+# 初回利用者登録後の再接続時（セッション新規）ログイン画面強制 (スマートフォン特化インターフェース)
+if saved_profile and not is_admin and not st.session_state.get("logged_in"):
+    st.markdown(f"""
+    <div style="background: linear-gradient(135deg, #FFF0F2 0%, #FFF5F5 100%); padding: 1.5rem; border-radius: 20px; border: 1px solid rgba(255, 182, 193, 0.5); margin: 1rem 0; text-align: center; box-shadow: 0 8px 32px rgba(255, 128, 150, 0.08);">
+        <h2 style="color: #C72C48; margin: 0; font-weight: bold; font-size: 1.5rem; text-align: center;">🐾 おかえりなさい！</h2>
+        <h4 style="color: #3D2D2D; margin-top: 0.5rem; font-size: 1.1rem; text-align: center;">{saved_profile.get('owner_name', '飼い主')} 様 ＆ {saved_profile.get('name', 'ペット')} ちゃん</h4>
+        <p style="color: #7D6363; font-size: 0.85rem; margin-top: 0.4rem; margin-bottom: 0; text-align: center;">ご登録いただいた4桁の暗証番号 (PIN) を入力してログインしてください🔑</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    with st.form("mobile_login_form"):
+        login_pin = st.text_input("4桁の暗証番号 (PIN)", value="", max_chars=4, type="password", key="mobile_login_pin_input")
+        submit_login = st.form_submit_button("🐾 ログインしてアルバムを開く")
+        
+        if submit_login:
+            if login_pin.strip() == saved_profile.get("pin_code", "").strip():
+                st.session_state["logged_in"] = True
+                st.success("🟢 ログインしました！")
+                st.rerun()
+            else:
+                st.error("❌ 暗証番号が正しくありません🐾")
+                
+    st.write("---")
+    if st.button("🆕 別のペットを登録・ログインする", key="btn_switch_profile_mobile", use_container_width=True):
+        st.query_params.clear()
+        st.session_state.clear()
+        st.rerun()
+        
+    st.stop()
+
 # サーバー側にプロフィールが無い場合、ブラウザの LocalStorage からの復元案内ボタンを提示
 if not saved_profile:
     restore_html = f"""
@@ -1264,6 +1356,7 @@ with st.sidebar:
                     data_manager.save_profile(updated_data, new_user_id)
                     st.session_state["save_profile_to_localstorage"] = updated_data
                     st.query_params["user_id"] = new_user_id
+                    st.session_state["logged_in"] = True
                     st.success("ペット情報を更新しました。専用URLが新しくなりました🐾")
                     st.rerun()
 
@@ -1405,6 +1498,7 @@ def show_profile_dialog():
                 st.session_state["save_profile_to_localstorage"] = profile_data
                 st.query_params["user_id"] = registered_user_id
                 st.session_state["show_tutorial_after_reg"] = True
+                st.session_state["logged_in"] = True
                 st.success("登録が完了しました！使い方ガイドを表示します。")
                 st.rerun()
 
@@ -1429,6 +1523,7 @@ def show_profile_dialog():
                 if loaded_profile and "name" in loaded_profile:
                     st.session_state["save_profile_to_localstorage"] = loaded_profile
                     st.query_params["user_id"] = login_user_id
+                    st.session_state["logged_in"] = True
                     st.success(f"おかえりなさい！ {loaded_profile.get('name')}ちゃんのお部屋にログインしました🐾")
                     st.rerun()
                 else:
