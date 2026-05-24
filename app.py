@@ -5,6 +5,7 @@ import uuid
 import base64
 import data_manager
 import ai_core
+import line_api
 import streamlit.components.v1 as components
 import pandas as pd
 import json
@@ -21,8 +22,8 @@ def get_loading_video_base64():
 def render_admin_dashboard():
     st.markdown("""
     <div style="background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%); padding: 1.5rem; border-radius: 16px; border: 1px solid rgba(255,255,255,0.08); margin-bottom: 1.5rem; box-shadow: 0 10px 30px rgba(0,0,0,0.3);">
-        <h2 style="color: #00E6FF; margin: 0; font-weight: bold; font-size: 1.8rem;">🛠️ 管理者コントロールセンター</h2>
-        <p style="color: #94A3B8; font-size: 0.9rem; margin-top: 0.3rem; margin-bottom: 0;">実証PoC 10世帯向けシステム監視・テレメトリ・疎通テスト</p>
+        <h2 style="color: #00E6FF; margin: 0; font-weight: bold; font-size: 1.8rem; text-align: left;">🛠️ 管理者コントロールセンター</h2>
+        <p style="color: #94A3B8; font-size: 0.9rem; margin-top: 0.3rem; margin-bottom: 0; text-align: left;">実証PoC 10世帯向けシステム監視・テレメトリ・疎通テスト</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -44,25 +45,89 @@ def render_admin_dashboard():
     profiles = data_manager.load_all_profiles()
     df_profiles = pd.DataFrame(profiles)
     
-    # KPIサマリー
-    col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
+    # KPIメトリクス算出
     total_households = len(df_profiles) if not df_profiles.empty else 0
     total_generations = len(df_logs) if not df_logs.empty else 0
-    error_count = len(df_logs[df_logs["status"] == "ERROR"]) if not df_logs.empty and "status" in df_logs.columns else 0
-    error_rate = (error_count / total_generations * 100) if total_generations > 0 else 0.0
-
+    
+    success_count = 0
+    error_count = 0
+    error_rate = 0.0
+    avg_duration = 0.0
+    
+    if not df_logs.empty:
+        if "status" in df_logs.columns:
+            error_count = len(df_logs[df_logs["status"] == "ERROR"])
+            success_count = len(df_logs[df_logs["status"] == "SUCCESS"])
+        total_generations = len(df_logs)
+        error_rate = (error_count / total_generations * 100) if total_generations > 0 else 0.0
+        
+        # 成功したリクエストの平均処理時間を計算
+        if "duration_ms" in df_logs.columns:
+            success_durations = df_logs[df_logs["status"] == "SUCCESS"]["duration_ms"]
+            if not success_durations.empty:
+                avg_duration = success_durations.mean() / 1000.0  # 秒単位に変換
+                
+    # KPIサマリー表示 (高コントラストダークテーマ用)
+    col_kpi1, col_kpi2, col_kpi3, col_kpi4 = st.columns(4)
     with col_kpi1:
-        st.markdown(f'<div class="status-card" style="border-left: 4px solid #00E6FF; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: var(--text-color);">{total_households}</div><div style="font-size: 0.8rem; color: var(--text-color); opacity: 0.7;">登録世帯数 (スマホ)</div></div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="admin-card" style="border-left: 4px solid #00E6FF; text-align: center;">
+            <div style="font-size: 1.8rem; font-weight: bold; color: #00E6FF;">{total_households}</div>
+            <div style="font-size: 0.8rem; color: #94A3B8;">登録世帯数 (スマホ)</div>
+        </div>
+        """, unsafe_allow_html=True)
     with col_kpi2:
-        st.markdown(f'<div class="status-card" style="border-left: 4px solid #FFB800; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: var(--text-color);">{total_generations}</div><div style="font-size: 0.8rem; color: var(--text-color); opacity: 0.7;">思い出ストーリー生成数</div></div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="admin-card" style="border-left: 4px solid #FFB800; text-align: center;">
+            <div style="font-size: 1.8rem; font-weight: bold; color: #FFB800;">{total_generations}</div>
+            <div style="font-size: 0.8rem; color: #94A3B8;">思い出ストーリー生成数</div>
+        </div>
+        """, unsafe_allow_html=True)
     with col_kpi3:
-        st.markdown(f'<div class="status-card" style="border-left: 4px solid #FF4A4A; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: var(--text-color);">{error_count}</div><div style="font-size: 0.8rem; color: var(--text-color); opacity: 0.7;">システムエラー数</div></div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="admin-card" style="border-left: 4px solid #FF4A4A; text-align: center;">
+            <div style="font-size: 1.8rem; font-weight: bold; color: #FF4A4A;">{error_count}</div>
+            <div style="font-size: 0.8rem; color: #94A3B8;">システムエラー数</div>
+        </div>
+        """, unsafe_allow_html=True)
     with col_kpi4:
-        st.markdown(f'<div class="status-card" style="border-left: 4px solid #A652FF; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: var(--text-color);">{error_rate:.1f}%</div><div style="font-size: 0.8rem; color: var(--text-color); opacity: 0.7;">APIエラー率</div></div>', unsafe_allow_html=True)
+        st.markdown(f"""
+        <div class="admin-card" style="border-left: 4px solid #A652FF; text-align: center;">
+            <div style="font-size: 1.8rem; font-weight: bold; color: #A652FF;">{error_rate:.1f}%</div>
+            <div style="font-size: 0.8rem; color: #94A3B8;">APIエラー率</div>
+        </div>
+        """, unsafe_allow_html=True)
 
-    tab_dash, tab_house, tab_api, tab_log = st.tabs(["📈 利用統計", "🏡 登録世帯一覧", "🔑 API疎通テスト", "📝 サーバー生ログ"])
+    # タブ構成
+    tab_dash, tab_house, tab_api, tab_log = st.tabs(["📈 利用統計", "🏡 登録世帯一覧", "🔑 API疎通テスト ＆ 鍵管理", "📝 サーバー生ログ"])
     
     with tab_dash:
+        st.markdown("### 📈 システム利用統計 ＆ 稼働状況")
+        
+        # 稼働メトリクスを並べて表示
+        m1, m2, m3 = st.columns(3)
+        with m1:
+            st.markdown(f"""
+            <div class="admin-card" style="text-align: center; padding: 1rem;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #10B981;">{100.0 - error_rate:.1f}%</div>
+                <div style="font-size: 0.8rem; color: #94A3B8;">システム正常処理率</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with m2:
+            st.markdown(f"""
+            <div class="admin-card" style="text-align: center; padding: 1rem;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #00E6FF;">{avg_duration:.2f} 秒</div>
+                <div style="font-size: 0.8rem; color: #94A3B8;">平均AI処理時間</div>
+            </div>
+            """, unsafe_allow_html=True)
+        with m3:
+            st.markdown(f"""
+            <div class="admin-card" style="text-align: center; padding: 1rem;">
+                <div style="font-size: 1.5rem; font-weight: bold; color: #FFB800;">{success_count} 回</div>
+                <div style="font-size: 0.8rem; color: #94A3B8;">成功ストーリー生成</div>
+            </div>
+            """, unsafe_allow_html=True)
+            
         if df_logs.empty:
             st.info("ストーリーが生成されると、ここにグラフ分析がリアルタイム描画されます🐾")
         else:
@@ -80,12 +145,42 @@ def render_admin_dashboard():
                     df_display2 = genre_counts.reset_index()
                     df_display2.columns = ["小説ジャンル", "生成回数"]
                     st.dataframe(df_display2, use_container_width=True, hide_index=True)
-                    
+            
+            # エラー発生原因ランキング
+            st.write("---")
+            st.markdown("##### ⚠️ エラー発生原因ランキング")
+            if error_count == 0:
+                st.success("現在、システムエラーは発生していません 🟢")
+            else:
+                if "error_msg" in df_logs.columns:
+                    error_logs = df_logs[(df_logs["status"] == "ERROR") & (df_logs["error_msg"] != "")]
+                    if not error_logs.empty:
+                        def categorize_error(msg):
+                            m = str(msg).lower()
+                            if "429" in m or "quota" in m or "exhausted" in m or "rate limit" in m:
+                                return "Gemini API 制限超過 (Rate Limit / Quota Exceeded)"
+                            if "api key" in m or "api_key" in m or "unauthorized" in m or "403" in m:
+                                return "APIキー認証エラー (Invalid / Unauthorized API Key)"
+                            if "timeout" in m or "timed out" in m:
+                                return "通信タイムアウト (Timeout)"
+                            if "sanitize" in m or "decode" in m or "format" in m:
+                                return "画像フォーマット・デコードエラー (Image Processing Error)"
+                            return f"その他例外: {msg[:100]}"
+                        
+                        error_logs["エラーカテゴリ"] = error_logs["error_msg"].apply(categorize_error)
+                        error_ranking = error_logs["エラーカテゴリ"].value_counts().reset_index()
+                        error_ranking.columns = ["検出されたエラー原因・内容", "発生回数"]
+                        st.dataframe(error_ranking, use_container_width=True, hide_index=True)
+                    else:
+                        st.warning("エラーログはありますが、エラー詳細メッセージは空です。")
+                        
     with tab_house:
-        st.markdown("##### 🏡 登録世帯（10世帯PoC）のペットプロフィール一覧")
+        st.markdown("### 🏡 登録世帯一覧 ＆ アクションパネル")
         if df_profiles.empty:
             st.warning("まだ登録世帯がありません。")
         else:
+            # 1. 登録世帯全体のデータグリッド
+            st.markdown("##### 📊 世帯データ一覧")
             display_cols = {
                 "registered_at": "登録日時",
                 "user_id": "世帯ID",
@@ -97,60 +192,209 @@ def render_admin_dashboard():
                 "personality": "基本性格"
             }
             existing_cols = [c for c in display_cols.keys() if c in df_profiles.columns]
-            st.dataframe(df_profiles[existing_cols].rename(columns=display_cols), use_container_width=True)
+            st.dataframe(df_profiles[existing_cols].rename(columns=display_cols), use_container_width=True, hide_index=True)
+            
+            st.write("---")
+            
+            # 2. 世帯の個別詳細表示 & 削除パネル
+            st.markdown("##### 🔍 世帯プロフィールの詳細表示 ＆ 個別管理")
+            house_options = []
+            house_map = {}
+            for _, row in df_profiles.iterrows():
+                opt_str = f"{row.get('name', '名前なし')} ({row.get('user_id')}) - 飼い主: {row.get('owner_name', '未登録')}"
+                house_options.append(opt_str)
+                house_map[opt_str] = row
+                
+            selected_opt = st.selectbox("詳細表示・操作対象の世帯を選択してください", options=house_options)
+            
+            if selected_opt:
+                selected_row = house_map[selected_opt]
+                sel_user_id = selected_row.get("user_id")
+                
+                # 詳細プロフィールカード
+                st.markdown(f"""
+                <div class="admin-card">
+                    <h4 style="color: #00E6FF; margin-top: 0;">🐶 {selected_row.get('name')} ちゃんの登録プロファイル</h4>
+                    <table style="width:100%; border-collapse: collapse; color: #FFFFFF;">
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 6px; font-weight: bold; width: 30%;">世帯ID (user_id)</td><td style="padding: 6px;"><code>{sel_user_id}</code></td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 6px; font-weight: bold;">登録日時 (更新時)</td><td style="padding: 6px;">{selected_row.get('registered_at')}</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 6px; font-weight: bold;">飼い主のおなまえ</td><td style="padding: 6px;">{selected_row.get('owner_name')}</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 6px; font-weight: bold;">4桁の暗証番号 (PIN)</td><td style="padding: 6px;"><code>{selected_row.get('pin_code')}</code></td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 6px; font-weight: bold;">ペットの名前</td><td style="padding: 6px;">{selected_row.get('name')} ({selected_row.get('gender')})</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 6px; font-weight: bold;">ペット一人称</td><td style="padding: 6px;">「{selected_row.get('pronoun')}」</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 6px; font-weight: bold;">ペット種類 (品種)</td><td style="padding: 6px;">{selected_row.get('pet_type')} ({selected_row.get('breed')})</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 6px; font-weight: bold;">お誕生日 / 計算年齢</td><td style="padding: 6px;">{selected_row.get('birthday')} / {selected_row.get('age_display')}</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 6px; font-weight: bold;">飼い主の呼び方</td><td style="padding: 6px;">{selected_row.get('owner_call')}</td></tr>
+                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 6px; font-weight: bold;">基本性格</td><td style="padding: 6px;">{selected_row.get('personality')}</td></tr>
+                        <tr><td style="padding: 6px; font-weight: bold;">専用アルバムURL</td><td style="padding: 6px;"><a href="https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/?user_id={sel_user_id}" target="_blank" style="color: #00E6FF; text-decoration: underline;">専用URLを開く 🔗</a></td></tr>
+                    </table>
+                </div>
+                """, unsafe_allow_html=True)
+                
+                # 削除パネル
+                st.markdown("⚠️ **管理者操作パネル**")
+                confirm_delete = st.checkbox("この世帯のプロファイル及びデータを完全に削除することに同意します (この操作は取り消せません)", key=f"confirm_del_{sel_user_id}")
+                
+                if st.button("🗑️ この世帯のデータを削除する", key=f"btn_del_{sel_user_id}", type="secondary", use_container_width=True):
+                    if not confirm_delete:
+                        st.error("❌ 削除を実行するには、上記の同意チェックボックスをオンにしてください。")
+                    else:
+                        with st.spinner("世帯データを削除中..."):
+                            success = data_manager.delete_profile(sel_user_id)
+                            if success:
+                                st.success(f"🟢 世帯ID: {sel_user_id} のプロファイルデータを完全に削除しました。")
+                                import time
+                                time.sleep(1)
+                                st.rerun()
+                            else:
+                                st.error("❌ データの削除に失敗しました。ファイルが存在しないか、権限エラーが発生した可能性があります。")
             
     with tab_api:
-        st.markdown("##### 🔑 API疎通テスト＆管理")
+        st.markdown("### 🔑 API鍵の管理 ＆ 疎通テスト")
+        
+        c_data = data_manager.load_config()
         
         def mask_key(k):
             if not k: return "未設定 🔴"
-            return f"{k[:4]}...{k[-4:]} (設定済み 🟢)"
+            return f"{k[:6]}...{k[-6:]} (設定済み 🟢)"
             
-        # load_configを呼び出してAPIキーを動的に取得
-        c_data = data_manager.load_config()
-        st.markdown(f"**Google Gemini APIキー:** `{mask_key(c_data.get('GOOGLE_API_KEY'))}`", unsafe_allow_html=True)
-        st.markdown(f"**LINEアクセストークン:** `{mask_key(c_data.get('LINE_CHANNEL_ACCESS_TOKEN'))}`", unsafe_allow_html=True)
+        # 1. 鍵管理セクション (入力 & 保存)
+        st.markdown("##### ⚙️ マスター認証情報の更新")
+        st.write("Google Gemini APIキーおよびLINE Channel Access Tokenを更新できます。")
+        
+        with st.form("api_key_settings_form"):
+            input_google_key = st.text_input(
+                "🔑 Google Gemini APIキー", 
+                value=c_data.get("GOOGLE_API_KEY", ""), 
+                type="password", 
+                help="Gemini-1.5-Pro / Gemini-2.5 などの実行に使用するAPIキー"
+            )
+            input_line_token = st.text_input(
+                "💬 LINE Channel Access Token (アクセストークン)", 
+                value=c_data.get("LINE_CHANNEL_ACCESS_TOKEN", ""), 
+                type="password", 
+                help="LINE公式アカウントのMessaging APIブロードキャスト送信トークン"
+            )
+            
+            save_master_btn = st.form_submit_button("💾 設定を保存する")
+            
+            if save_master_btn:
+                data_manager.save_config(input_line_token, input_google_key)
+                st.success("🟢 マスター設定を config.json へ正常に保存しました！")
+                import time
+                time.sleep(1)
+                st.rerun()
+                
+        st.write("---")
+        
+        # 2. 現在の設定状況
+        st.markdown("##### 📡 現在設定されている鍵の情報")
+        st.markdown(f"""
+        <div class="admin-card">
+            <table style="width:100%; border-collapse: collapse; color: #FFFFFF;">
+                <tr style="border-bottom: 1px solid rgba(255,255,255,0.05);"><td style="padding: 8px; font-weight: bold; width: 40%;">Google Gemini API Key</td><td style="padding: 8px;"><code>{mask_key(c_data.get('GOOGLE_API_KEY'))}</code></td></tr>
+                <tr><td style="padding: 8px; font-weight: bold;">LINE Channel Access Token</td><td style="padding: 8px;"><code>{mask_key(c_data.get('LINE_CHANNEL_ACCESS_TOKEN'))}</code></td></tr>
+            </table>
+        </div>
+        """, unsafe_allow_html=True)
         
         st.write("---")
+        
+        # 3. 疎通テストセクション
+        st.markdown("##### 📡 API接続・疎通テストの実行")
         test_g, test_l = st.columns(2)
         with test_g:
-            if st.button("🤖 Gemini API 疎通テスト", key="dash_test_gemini", use_container_width=True):
+            if st.button("🤖 Gemini API 疎通テストを実行", key="dash_test_gemini", use_container_width=True):
                 api_key = c_data.get("GOOGLE_API_KEY")
-                if not api_key: st.error("APIキーがありません")
+                if not api_key: 
+                    st.error("❌ APIキーが登録されていません。")
                 else:
-                    with st.spinner("検証中..."):
+                    with st.spinner("Gemini APIへテストリクエスト送信中..."):
                         try:
                             response = ai_core.run_lightweight_test(api_key)
-                            st.success(f"🟢 接続成功！AI応答: {response}")
-                        except Exception as e: st.error(f"接続失敗: {e}")
+                            st.success(f"🟢 接続成功！\n\n**AIからの応答:**\n{response}")
+                        except Exception as e: 
+                            st.error(f"❌ 接続失敗:\n{e}")
         with test_l:
-            if st.button("💬 LINE API 疎通テスト", key="dash_test_line", use_container_width=True):
+            if st.button("💬 LINE Messaging API 疎通テストを実行", key="dash_test_line", use_container_width=True):
                 line_token = c_data.get("LINE_CHANNEL_ACCESS_TOKEN")
-                if not line_token: st.error("トークンがありません")
+                if not line_token: 
+                    st.error("❌ LINEアクセストークンが登録されていません。")
                 else:
-                    with st.spinner("検証中..."):
+                    with st.spinner("LINE APIサーバーへテストリクエスト送信中..."):
                         status = line_api.test_line_credentials(line_token)
                         if "成功" in status or "200" in status:
-                            st.success(f"🟢 LINE疎通成功！ {status}")
-                        else: st.error(f"LINE疎通失敗: {status}")
-                        
+                            st.success(f"🟢 LINE疎通成功！\n\n**詳細:**\n{status}")
+                        else: 
+                            st.error(f"❌ LINE疎通失敗:\n{status}")
+                            
     with tab_log:
-        st.markdown("##### 📝 サーバー実行ログ（最新50件）")
+        st.markdown("### 📝 サーバー実行ログ（最新100件）")
+        
         if df_logs.empty:
             st.warning("実行ログがまだありません。")
         else:
-            df_logs_sorted = df_logs.iloc[::-1].head(50)
-            existing_log_cols = [c for c in ["timestamp", "user_id", "pet_name", "duration_ms", "status", "error_msg"] if c in df_logs_sorted.columns]
-            st.dataframe(
-                df_logs_sorted[existing_log_cols],
-                use_container_width=True
+            # 1. フィルタリング選択
+            filter_status = st.selectbox(
+                "表示するログのステータスでフィルタリング:",
+                options=["すべてを表示", "成功のみ (SUCCESS)", "エラーのみ (ERROR)"]
             )
-            if st.button("🗑️ 実行ログをすべて消去", key="dash_clear_logs"):
-                try:
-                    if os.path.exists(log_file): os.remove(log_file)
-                    st.success("消去しました。再読み込みしてください。")
-                    st.rerun()
-                except Exception as e: st.error(f"エラー: {e}")
+            
+            # ソート（最新順）
+            df_logs_sorted = df_logs.iloc[::-1]
+            
+            # フィルター適用
+            if filter_status == "成功のみ (SUCCESS)":
+                df_filtered = df_logs_sorted[df_logs_sorted["status"] == "SUCCESS"]
+            elif filter_status == "エラーのみ (ERROR)":
+                df_filtered = df_logs_sorted[df_logs_sorted["status"] == "ERROR"]
+            else:
+                df_filtered = df_logs_sorted
+                
+            st.markdown(f"表示中: `{len(df_filtered)}` 件のログ")
+            
+            # グリッドカラム表示の最適化
+            existing_log_cols = [c for c in ["timestamp", "user_id", "pet_name", "pet_type", "story_mode", "genre", "duration_ms", "status", "error_msg"] if c in df_filtered.columns]
+            
+            display_log_cols = {
+                "timestamp": "タイムスタンプ",
+                "user_id": "世帯ID",
+                "pet_name": "ペット名",
+                "pet_type": "種別",
+                "story_mode": "生成モード",
+                "genre": "ジャンル",
+                "duration_ms": "処理時間(ms)",
+                "status": "ステータス",
+                "error_msg": "エラー内容"
+            }
+            
+            filtered_display = df_filtered[existing_log_cols].rename(columns=display_log_cols)
+            
+            st.dataframe(
+                filtered_display,
+                use_container_width=True,
+                hide_index=True
+            )
+            
+            st.write("---")
+            
+            # 2. ログクリアアクション
+            st.markdown("⚠️ **ログデータ管理**")
+            confirm_clear = st.checkbox("すべてのサーバー生ログを完全に消去することに同意します", key="confirm_clear_logs")
+            
+            if st.button("🗑️ 実行ログをすべて消去する", key="dash_clear_logs", type="secondary", use_container_width=True):
+                if not confirm_clear:
+                    st.error("❌ 消去を実行するには、上記の同意チェックボックスをオンにしてください。")
+                else:
+                    try:
+                        if os.path.exists(log_file): 
+                            os.remove(log_file)
+                        st.success("🟢 サーバー生ログファイルを正常に初期化しました。")
+                        import time
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e: 
+                        st.error(f"❌ ログ消去中にエラーが発生しました: {e}")
 
 def mask_error_message(err_msg):
     """
@@ -229,6 +473,98 @@ if "user_id" not in st.query_params:
     st.rerun()
 
 user_id = st.query_params["user_id"]
+
+# --- 管理者判定と専用ルーティング ---
+is_admin = st.query_params.get("admin") == "true"
+if is_admin:
+    st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&display=swap');
+        
+        /* 管理者専用ダークテーマの強制適用 */
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+            font-family: 'Noto Sans JP', sans-serif !important;
+            background-color: #0F172A !important;
+            color: #F8FAFC !important;
+        }
+        
+        /* 管理者画面のテキスト要素は白〜明るいグレーを強制 */
+        label, p, span, li, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, [data-testid="stWidgetLabel"] p {
+            color: #F8FAFC !important;
+        }
+        
+        /* ダッシュボードカード */
+        .admin-card {
+            background-color: #1E293B !important;
+            border-radius: 16px !important;
+            padding: 1.5rem !important;
+            margin-bottom: 1.5rem !important;
+            border: 1px solid rgba(255, 255, 255, 0.08) !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25) !important;
+        }
+        
+        /* 入力フィールドの文字色と背景色を強制固定（管理者用） */
+        div[data-baseweb="input"] input, 
+        div[data-baseweb="textarea"] textarea,
+        .stTextArea textarea, 
+        .stTextInput input {
+            background-color: #1E293B !important;
+            color: #FFFFFF !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        }
+        
+        /* タブの文字色と背景色の強制指定 (管理者用) */
+        button[data-baseweb="tab"] {
+            color: #94A3B8 !important;
+            font-weight: bold !important;
+            opacity: 0.7 !important;
+        }
+        button[data-baseweb="tab"][aria-selected="true"] {
+            color: #00E6FF !important;
+            border-bottom-color: #00E6FF !important;
+            opacity: 1.0 !important;
+        }
+        
+        /* 選択ボックスのライトテーマ解除 (管理者用) */
+        div[data-baseweb="select"] > div {
+            background-color: #1E293B !important;
+            color: #FFFFFF !important;
+            border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        }
+        div[role="listbox"] {
+            background-color: #1E293B !important;
+        }
+        div[role="listbox"] li, div[role="option"] {
+            background-color: #1E293B !important;
+            color: #FFFFFF !important;
+        }
+        div[role="listbox"] li:hover, div[role="option"]:hover,
+        div[role="listbox"] li[aria-selected="true"] {
+            background-color: #334155 !important;
+            color: #00E6FF !important;
+        }
+
+        /* ボタンデザイン (管理者用 - コントラスト重視の #E5E5E5 ボタン) */
+        .stButton>button,
+        div[data-testid="stFormSubmitButton"] button {
+            background: #E5E5E5 !important;
+            color: #000000 !important;
+            border: 1px solid #000000 !important;
+            font-weight: 700 !important;
+            border-radius: 12px !important;
+            padding: 0.6rem 1.5rem !important;
+            width: 100% !important;
+        }
+        .stButton>button:hover,
+        div[data-testid="stFormSubmitButton"] button:hover {
+            background: #D8D8D8 !important;
+            color: #000000 !important;
+            border: 1px solid #000000 !important;
+        }
+    </style>
+    """, unsafe_allow_html=True)
+    render_admin_dashboard()
+    st.stop()
 
 # --- LocalStorage からのペット情報復元処理 ---
 if "restore_profile" in st.query_params:

@@ -50,6 +50,19 @@ def load_profile(user_id=None):
 def save_profile(data, user_id=None): 
     save_json(get_profile_filepath(user_id), data)
 
+def delete_profile(user_id):
+    import os
+    if not user_id:
+        return False
+    filepath = get_profile_filepath(user_id)
+    if os.path.exists(filepath):
+        try:
+            os.remove(filepath)
+            return True
+        except:
+            return False
+    return False
+
 # --- 開発者コンソール用テレメトリ（ログ記録と世帯データ集約） ---
 import glob
 import datetime
