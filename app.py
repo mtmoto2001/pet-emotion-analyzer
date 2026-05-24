@@ -496,37 +496,69 @@ except Exception as e:
 # --- ページ設定 ---
 st.set_page_config(page_title="うちのコ日常アルバム - Pet Daily AI", page_icon=icon_image, layout="wide")
 
-# PWA用のホーム画面追加アイコンをHTMLのheadに強制注入
-if app_icon_base64:
-    inject_icon_html = f"""
-    <script>
-        try {{
-            const iconBase64 = "data:image/png;base64,{app_icon_base64}";
-            
-            // iOSの「ホーム画面に追加」アイコン
-            let appleLink = document.querySelector("link[rel='apple-touch-icon']");
-            if (!appleLink) {{
-                appleLink = document.createElement("link");
-                appleLink.rel = "apple-touch-icon";
-                document.head.appendChild(appleLink);
-            }}
-            appleLink.href = iconBase64;
 
-            // Android/Chromeのショートカットアイコン
-            let favLink = document.querySelector("link[rel='icon']");
-            if (!favLink) {{
-                favLink = document.createElement("link");
-                favLink.rel = "icon";
-                document.head.appendChild(favLink);
-            }}
-            favLink.href = iconBase64;
-            favLink.sizes = "192x192";
-        }} catch (e) {{
-            console.error("Failed to inject app icon:", e);
-        }}
-    </script>
-    """
-    components.html(inject_icon_html, height=0, width=0)
+# --- PWA完全対応：manifest・メタタグ・Service Worker を親headに注入 ---
+pwa_inject_html = """
+<script>
+(function() {
+    try {
+        const pDoc = window.parent.document;
+        const pHead = pDoc.head;
+
+        // 1. manifest.json リンク
+        if (!pDoc.querySelector("link[rel='manifest']")) {
+            const manifest = pDoc.createElement("link");
+            manifest.rel = "manifest";
+            manifest.href = "/_statics/manifest.json";
+            pHead.appendChild(manifest);
+        }
+
+        // 2. iOS ホーム画面アプリ化メタタグ
+        const metas = {
+            "apple-mobile-web-app-capable": "yes",
+            "apple-mobile-web-app-status-bar-style": "black-translucent",
+            "apple-mobile-web-app-title": "うちのコ",
+            "mobile-web-app-capable": "yes",
+            "theme-color": "#C72C48"
+        };
+        for (const [name, content] of Object.entries(metas)) {
+            if (!pDoc.querySelector("meta[name='" + name + "']")) {
+                const m = pDoc.createElement("meta");
+                m.name = name;
+                m.content = content;
+                pHead.appendChild(m);
+            }
+        }
+
+        // 3. Apple Touch Icon（iOS ホーム画面アイコン）
+        if (!pDoc.querySelector("link[rel='apple-touch-icon']")) {
+            const appleIcon = pDoc.createElement("link");
+            appleIcon.rel = "apple-touch-icon";
+            appleIcon.href = "/_statics/icons/apple-touch-icon.png";
+            pHead.appendChild(appleIcon);
+        }
+
+        // 4. ビューポート固定（ピンチズーム無効化でアプリ感UP）
+        const vp = pDoc.querySelector("meta[name='viewport']");
+        if (vp) {
+            vp.content = "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no";
+        }
+
+        // 5. Service Worker 登録
+        if ('serviceWorker' in window.parent.navigator) {
+            window.parent.navigator.serviceWorker.register('/_statics/sw.js')
+                .then(function(reg) { console.log('[PWA] SW registered:', reg.scope); })
+                .catch(function(err) { console.warn('[PWA] SW registration failed:', err); });
+        }
+
+    } catch(e) {
+        console.warn('[PWA] inject failed:', e);
+    }
+})();
+</script>
+"""
+components.html(pwa_inject_html, height=0, width=0)
+
 
 # --- 管理者判定と専用ルーティング ---
 is_admin = st.query_params.get("admin") == "true"
