@@ -460,10 +460,11 @@ if not saved_profile:
                 const container = document.getElementById("restore-container");
                 const link = document.getElementById("restore-link");
                 
-                // 親のURL（referrer）を取得
+                // 親のURL（referrer）を取得。安全のため Streamlit Cloud の本番ドメインを検証・フォールバックに指定
                 let parentUrlStr = document.referrer;
-                if (!parentUrlStr || parentUrlStr.indexOf(window.location.hostname) === -1) {{
-                    parentUrlStr = window.location.href;
+                if (!parentUrlStr || (parentUrlStr.indexOf("streamlit.app") === -1 && parentUrlStr.indexOf("localhost") === -1)) {{
+                    // クラウド本番ドメインに安全にフォールバック
+                    parentUrlStr = "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
                 }}
                 const parentUrl = new URL(parentUrlStr);
                 
