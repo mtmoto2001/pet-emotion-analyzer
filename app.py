@@ -1243,14 +1243,14 @@ if not saved_profile:
                         .sub-title, 
                         .main-title, 
                         .stAlert,
-                        iframe[title="streamlit.components.v1.html"]:not(#restore-app-iframe) {
+                        iframe[title="streamlit.components.v1.html"]:not(#restore-app-iframe) {{
                             display: none !important;
-                        }
+                        }}
                         /* 復元用の本iframeだけは表示するように制御 */
-                        #restore-app-iframe {
+                        #restore-app-iframe {{
                             display: block !important;
                             border: none !important;
-                        }
+                        }}
                     `;
                     window.parent.document.head.appendChild(style);
                     
