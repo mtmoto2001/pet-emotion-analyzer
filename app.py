@@ -248,11 +248,16 @@ st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;700&display=swap');
     
-    /* ベースリセット ＆ スマートフォン最適化 */
+    /* ベースリセット ＆ さくらミルクティー・ライトテーマの強制適用 */
     html, body, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
         font-family: 'Noto Sans JP', sans-serif !important;
-        background-color: var(--background-color) !important;
-        color: var(--text-color) !important;
+        background-color: #FFF5F5 !important;
+        color: #3D2D2D !important;
+    }
+    
+    /* すべての一般的な文字要素に高視認性のココアブラウンを強制 */
+    label, p, span, li, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText, [data-testid="stWidgetLabel"] p {
+        color: #3D2D2D !important;
     }
     
     /* メインタイトル (ローズゴールド/サクラピンクの美しいグラデーション) */
@@ -268,30 +273,30 @@ st.markdown("""
         filter: drop-shadow(0px 2px 4px rgba(255, 128, 150, 0.25));
     }
     .sub-title {
-        color: var(--text-color) !important;
-        opacity: 0.75 !important;
+        color: #3D2D2D !important;
+        opacity: 0.8 !important;
         font-size: 0.92rem !important;
         margin-bottom: 1.8rem !important;
         text-align: center !important;
         line-height: 1.6 !important;
     }
     
-    /* プレミアムカード (テーマの2次背景に完全同期) */
+    /* プレミアムカード (ピュアホワイト) */
     .status-card {
-        background: var(--secondary-background-color) !important;
+        background-color: #FFFFFF !important;
         border-radius: 18px !important;
         padding: 1.2rem !important;
         margin-bottom: 1.2rem !important;
         border: 1px solid rgba(255, 128, 150, 0.4) !important;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
     }
     .status-card, .status-card * {
-        color: var(--text-color) !important;
+        color: #3D2D2D !important;
     }
     
-    /* ストーリープレビューボックス (テーマの2次背景に完全同期、高い視認性) */
+    /* ストーリープレビューボックス (ピュアホワイト、高い視認性) */
     .line-preview-box { 
-        background-color: var(--secondary-background-color) !important; 
+        background-color: #FFFFFF !important; 
         border-left: 5px solid #FF8096 !important; 
         border-radius: 14px !important; 
         padding: 1.4rem !important; 
@@ -303,22 +308,22 @@ st.markdown("""
         border: 1px solid rgba(255, 128, 150, 0.25) !important;
     }
     .line-preview-box, .line-preview-box * {
-        color: var(--text-color) !important; 
+        color: #3D2D2D !important; 
     }
     
     /* 親しみやすい透過入力フォーム */
     div[data-testid="stForm"] {
-        background: var(--secondary-background-color) !important;
+        background-color: #FFFFFF !important;
         border-radius: 24px !important;
         border: 1px solid rgba(255, 128, 150, 0.35) !important;
         padding: 1.6rem !important;
-        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.08) !important;
+        box-shadow: 0 12px 35px rgba(0, 0, 0, 0.05) !important;
     }
     
     /* 🐾 写真フレーム風カスタムアップローダー */
     div[data-testid="stFileUploader"] {
         border: 2px dashed rgba(255, 128, 150, 0.5) !important;
-        background: var(--secondary-background-color) !important;
+        background-color: #FFFFFF !important;
         border-radius: 18px !important;
         padding: 1.2rem !important;
         text-align: center !important;
@@ -372,7 +377,7 @@ st.markdown("""
         bottom: 0 !important;
         width: 100vw !important;
         height: 100vh !important;
-        background-color: var(--background-color) !important;
+        background-color: #FFF5F5 !important;
         z-index: 9999999 !important;
         display: flex !important;
         flex-direction: column !important;
@@ -385,11 +390,11 @@ st.markdown("""
         text-align: center !important;
         max-width: 440px !important;
         width: 100% !important;
-        background: var(--secondary-background-color) !important;
+        background-color: #FFFFFF !important;
         border: 1px solid rgba(255, 128, 150, 0.3) !important;
         padding: 2.2rem 1.8rem !important;
         border-radius: 28px !important;
-        box-shadow: 0 20px 50px rgba(0,0,0,0.15) !important;
+        box-shadow: 0 20px 50px rgba(0,0,0,0.1) !important;
         backdrop-filter: blur(20px) !important;
         -webkit-backdrop-filter: blur(20px) !important;
     }
@@ -397,18 +402,18 @@ st.markdown("""
         width: 100% !important;
         max-width: 280px !important;
         border-radius: 20px !important;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.15) !important;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
         border: 2px solid rgba(255, 182, 193, 0.3) !important;
         margin-bottom: 1.8rem !important;
     }
     
     /* サイドバーの背景色をシステムの背景色に同調 */
     section[data-testid="stSidebar"] {
-        background-color: var(--secondary-background-color) !important;
+        background-color: #FFF5F5 !important;
         border-right: 1px solid rgba(255, 128, 150, 0.2) !important;
     }
     section[data-testid="stSidebar"] * {
-        color: var(--text-color) !important;
+        color: #3D2D2D !important;
     }
 
     /* Streamlitのネイティブ入力フィールドとテキストエリアの文字色と背景色を強制固定して視認性を確保 */
@@ -416,14 +421,39 @@ st.markdown("""
     div[data-baseweb="textarea"] textarea,
     .stTextArea textarea, 
     .stTextInput input {
-        background-color: var(--background-color) !important;
-        color: var(--text-color) !important;
+        background-color: #FFFFFF !important;
+        color: #3D2D2D !important;
         border: 1px solid rgba(255, 128, 150, 0.4) !important;
+    }
+    
+    /* セレクトボックスとオプションリストのライトテーマ強制 */
+    div[data-baseweb="select"] > div {
+        background-color: #FFFFFF !important;
+        color: #3D2D2D !important;
+        border: 1px solid rgba(255, 128, 150, 0.4) !important;
+    }
+    div[role="listbox"] {
+        background-color: #FFFFFF !important;
+    }
+    div[role="listbox"] li, div[role="option"] {
+        background-color: #FFFFFF !important;
+        color: #3D2D2D !important;
+    }
+    div[role="listbox"] li:hover, div[role="option"]:hover,
+    div[role="listbox"] li[aria-selected="true"] {
+        background-color: #FFF5F5 !important;
+        color: #C72C48 !important;
+    }
+    
+    /* ラジオボタン・チェックボックスの文字色保護 */
+    div[data-testid="stRadio"] label, div[data-testid="stRadio"] label p, div[data-testid="stRadio"] label span,
+    div[data-testid="stCheckbox"] label, div[data-testid="stCheckbox"] label p {
+        color: #3D2D2D !important;
     }
     
     /* アコーディオン・エキスパンダーのヘッダーと中身の視認性確保 */
     div[data-testid="stExpander"] {
-        background-color: var(--secondary-background-color) !important;
+        background-color: #FFFFFF !important;
         border: 1px solid rgba(255, 128, 150, 0.3) !important;
         border-radius: 14px !important;
     }
@@ -434,7 +464,7 @@ st.markdown("""
 
     /* タブの文字色と背景色の強制指定 */
     button[data-baseweb="tab"] {
-        color: var(--text-color) !important;
+        color: #3D2D2D !important;
         font-weight: bold !important;
         opacity: 0.7 !important;
     }
@@ -1161,7 +1191,7 @@ with col1:
                 p_text.empty()
 
 with col2:
-    st.markdown("### 📚 完成した思い出絵本")
+    st.markdown("### 📚 完成した思い出ストーリー")
     if 'line_status' in st.session_state: st.info(st.session_state['line_status'])
         
     if 'display_feelings' in st.session_state and 'display_story' in st.session_state:
