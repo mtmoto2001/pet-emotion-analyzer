@@ -654,12 +654,54 @@ with st.sidebar:
                 
             edit_owner = st.text_input("飼い主さんの呼び方", value=saved_profile.get("owner_call", "パパ"), key="ed_owner")
             
+            # --- お誕生日、性格、エピソードの編集項目を追加 ---
+            st.write("お誕生日（年齢判定用🐾）")
+            # 既存値からデフォルトの日付を作成
+            saved_y = saved_profile.get("birth_y", 2023)
+            saved_m = saved_profile.get("birth_m", 1)
+            default_birth_date = datetime.date(saved_y, saved_m, 1)
+            
+            edit_birthday = st.date_input(
+                "お誕生日を変更",
+                value=default_birth_date,
+                min_value=datetime.date(2026-25, 1, 1),
+                max_value=datetime.date(2026, 5, 24),
+                key="ed_birthday_input",
+                label_visibility="collapsed"
+            )
+            
+            personality_options = ["元気いっぱいでやんちゃ", "甘えん坊で寂しがり屋", "おっとりマイペース", "賢く、人間の言葉を理解しようとする", "臆病だけど優しい"]
+            try:
+                pers_index = personality_options.index(saved_profile.get("personality", "元気いっぱいでやんちゃ"))
+            except ValueError:
+                pers_index = 0
+                
+            edit_personality = st.selectbox("基本の性格傾向", personality_options, index=pers_index, key="ed_personality")
+            edit_personality_detail = st.text_area("具体的なエピソード・行動詳細", value=saved_profile.get("personality_detail", ""), key="ed_pers_detail")
+            
             if st.button("💾 登録情報を更新する"):
+                # 年齢の自動計算
+                current_date = datetime.date(2026, 5, 24)
+                birth_date = edit_birthday
+                total_months = (current_date.year - birth_date.year) * 12 + current_date.month - birth_date.month
+                if total_months < 0: age_display = "生後0ヶ月"
+                elif total_months < 12: age_display = f"子犬/子猫期（生後 {total_months} ヶ月）"
+                else: age_display = f"成犬/成猫期（ {total_months // 12} 歳 {total_months % 12} ヶ月）"
+                
                 updated_data = saved_profile.copy()
                 updated_data.update({
-                    "name": edit_name, "pet_type": edit_type, "breed": edit_breed, 
-                    "color": edit_color, "gender": edit_gender, "pronoun": edit_pronoun,
-                    "owner_call": edit_owner
+                    "name": edit_name, 
+                    "pet_type": edit_type, 
+                    "breed": edit_breed, 
+                    "color": edit_color, 
+                    "gender": edit_gender, 
+                    "pronoun": edit_pronoun,
+                    "birth_y": edit_birthday.year,
+                    "birth_m": edit_birthday.month,
+                    "personality": edit_personality,
+                    "personality_detail": edit_personality_detail,
+                    "owner_call": edit_owner,
+                    "age_display": age_display
                 })
                 data_manager.save_profile(updated_data, user_id)
                 st.session_state["save_profile_to_localstorage"] = updated_data
