@@ -557,7 +557,8 @@ with st.sidebar:
         st.markdown("### 📝 登録されているペットの情報")
         st.markdown(f"""
         <div class="status-card">
-        🐶 <b>お名前:</b> {saved_profile.get('name')}<br>
+        🐶 <b>お名前:</b> {saved_profile.get('name')} ({saved_profile.get('gender', '女の子')})<br>
+        🗣️ <b>一人称:</b> 「{saved_profile.get('pronoun', 'わたし')}」<br>
         🏷️ <b>種類:</b> {saved_profile.get('pet_type')} ({saved_profile.get('breed')})<br>
         ⏳ <b>年齢:</b> {saved_profile.get('age_display')}<br>
         👤 <b>飼い主さんの呼び方:</b> {saved_profile.get('owner_call')}
@@ -602,11 +603,64 @@ with st.sidebar:
             edit_breed = st.text_input("品種", value=saved_profile.get("breed", ""), key="ed_breed")
             edit_color = st.text_input("毛色", value=saved_profile.get("color", ""), key="ed_color")
             edit_gender = st.radio("性別", ["男の子", "女の子"], index=0 if saved_profile.get("gender", "男の子") == "男の子" else 1, key="ed_gender", horizontal=True)
+            
+            # --- 性別連動型の一人称変更 ---
+            if edit_gender == "男の子":
+                pronoun_options = [
+                    "ボク (甘えん坊・王道)", 
+                    "オレ (やんちゃ・活発)", 
+                    "ぼくちゃん (あざと可愛い・赤ちゃん)", 
+                    "自分 (忠実・おっとり)", 
+                    "拙者 (武士・忠義の侍)", 
+                    "世 (王様・尊大)", 
+                    f"{edit_name} (名前呼び・無邪気)", 
+                    "その他 (自由入力)"
+                ]
+            else:
+                pronoun_options = [
+                    "わたし (お姉さん・上品)", 
+                    "あたし (チャーミング・小悪魔)", 
+                    "うち (カジュアル・気さく)", 
+                    "あたい (おてんば・ツンデレ)", 
+                    "ぼく (ボーイッシュ・僕っこ)", 
+                    "あちき (花魁風・妖艶)", 
+                    f"{edit_name} (名前呼び・無邪気)", 
+                    "その他 (自由入力)"
+                ]
+            
+            # 既存の設定値にマッチさせるデフォルトインデックス算出
+            current_pronoun = saved_profile.get("pronoun", "ボク" if edit_gender == "男の子" else "わたし")
+            default_index = 0
+            for idx, opt in enumerate(pronoun_options):
+                if opt.startswith(current_pronoun + " "):
+                    default_index = idx
+                    break
+            else:
+                if current_pronoun == edit_name:
+                    for idx, opt in enumerate(pronoun_options):
+                        if opt.startswith(edit_name + " "):
+                            default_index = idx
+                            break
+                else:
+                    default_index = len(pronoun_options) - 1
+            
+            edit_pronoun_sel = st.selectbox("うちのコの一人称 🐾", pronoun_options, index=default_index, key="ed_pronoun_sel")
+            
+            if edit_pronoun_sel == "その他 (自由入力)":
+                default_custom = current_pronoun if current_pronoun not in [o.split(" ")[0] for o in pronoun_options[:-1]] else "おれ様"
+                edit_pronoun = st.text_input("自由に入力してください", value=default_custom, key="ed_pronoun_custom")
+            else:
+                edit_pronoun = edit_pronoun_sel.split(" ")[0]
+                
             edit_owner = st.text_input("飼い主さんの呼び方", value=saved_profile.get("owner_call", "パパ"), key="ed_owner")
             
             if st.button("💾 登録情報を更新する"):
                 updated_data = saved_profile.copy()
-                updated_data.update({"name": edit_name, "pet_type": edit_type, "breed": edit_breed, "color": edit_color, "gender": edit_gender, "owner_call": edit_owner})
+                updated_data.update({
+                    "name": edit_name, "pet_type": edit_type, "breed": edit_breed, 
+                    "color": edit_color, "gender": edit_gender, "pronoun": edit_pronoun,
+                    "owner_call": edit_owner
+                })
                 data_manager.save_profile(updated_data, user_id)
                 st.session_state["save_profile_to_localstorage"] = updated_data
                 st.success("ペット情報を更新しました。")
@@ -634,6 +688,38 @@ def show_profile_dialog():
     p_breed = st.text_input("犬種・猫種", value="ミニチュアダックスフンド")
     p_color = st.text_input("毛色・視覚的特徴", value="レッド")
     p_gender = st.radio("性別", ["男の子", "女の子"], horizontal=True)
+    
+    # 性別に応じた一人称の提案リスト
+    if p_gender == "男の子":
+        pronoun_options = [
+            "ボク (甘えん坊・王道)", 
+            "オレ (やんちゃ・活発)", 
+            "ぼくちゃん (あざと可愛い・赤ちゃん)", 
+            "自分 (忠実・おっとり)", 
+            "拙者 (武士・忠義の侍)", 
+            "世 (王様・尊大)", 
+            f"{p_name} (名前呼び・無邪気)", 
+            "その他 (自由入力)"
+        ]
+    else:
+        pronoun_options = [
+            "わたし (お姉さん・上品)", 
+            "あたし (チャーミング・小悪魔)", 
+            "うち (カジュアル・気さく)", 
+            "あたい (おてんば・ツンデレ)", 
+            "ぼく (ボーイッシュ・僕っこ)", 
+            "あちき (花魁風・妖艶)", 
+            f"{p_name} (名前呼び・無邪気)", 
+            "その他 (自由入力)"
+        ]
+        
+    p_pronoun_sel = st.selectbox("うちのコの一人称（おしゃべり語尾）🐾", pronoun_options)
+    
+    if p_pronoun_sel == "その他 (自由入力)":
+        p_pronoun = st.text_input("自由に入力してください（例：俺様、ボクちん、ミーなど）", value="おれ様", key="p_pronoun_custom")
+    else:
+        p_pronoun = p_pronoun_sel.split(" ")[0]
+        
     p_owner_call = st.text_input("飼い主さんの呼び方（パパ、ママなど）", value="パパ")
     
     st.write("お誕生日（年齢の自動判定に使用します🐾）")
@@ -665,10 +751,10 @@ def show_profile_dialog():
         if total_months < 0: age_display = "生後0ヶ月"
         elif total_months < 12: age_display = f"子犬/子猫期（生後 {total_months} ヶ月）"
         else: age_display = f"成犬/成猫期（ {total_months // 12} 歳 {total_months % 12} ヶ月）"
-
+ 
         profile_data = {
             "name": p_name, "pet_type": p_type, "breed": p_breed, "color": p_color,
-            "gender": p_gender, "birth_y": p_birth_y, "birth_m": p_birth_m,
+            "gender": p_gender, "pronoun": p_pronoun, "birth_y": p_birth_y, "birth_m": p_birth_m,
             "personality": p_pers, "personality_detail": p_pers_detail, "owner_call": p_owner_call,
             "age_display": age_display
         }
