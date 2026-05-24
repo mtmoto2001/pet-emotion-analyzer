@@ -680,7 +680,6 @@ with st.sidebar:
 LINE_CHANNEL_ACCESS_TOKEN = input_line if input_line else saved_config.get("LINE_CHANNEL_ACCESS_TOKEN", "")
 GOOGLE_API_KEY = input_google if input_google else saved_config.get("GOOGLE_API_KEY", "")
 
-@st.dialog("🐾 はじめてのペット登録")
 def show_profile_dialog():
     st.write("アプリを始める前に、まずはうちのコのことを教えてください。情報はローカルに安全に保存されます。")
     p_name = st.text_input("名前", value="ベル")
@@ -764,9 +763,10 @@ def show_profile_dialog():
         st.success("登録が完了しました！使い方ガイドを表示します。")
         st.rerun()
 
-# データがなければダイアログを強制表示
+# データがなければ登録画面をインライン表示して処理を停止
 if not saved_profile:
     show_profile_dialog()
+    st.stop()
 
 col1, col2 = st.columns([1, 1], gap="large")
 
