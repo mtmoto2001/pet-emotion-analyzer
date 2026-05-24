@@ -937,6 +937,35 @@ st.markdown("""
         opacity: 1.0 !important;
     }
     
+    /* 使い方ガイド（ダイアログ）の背景と文字色のコントラスト徹底強制 */
+    div[role="dialog"], 
+    div[data-testid="stDialog"],
+    div[role="dialog"] div,
+    [data-testid="stDialog"] div,
+    [data-testid="stDialog"] p,
+    [data-testid="stDialog"] span,
+    [data-testid="stDialog"] li,
+    [data-testid="stDialog"] label {
+        background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
+        color: #3D2D2D !important;
+    }
+    
+    /* ダイアログの見出しはローズレッドで高コントラスト化 */
+    div[role="dialog"] h1, div[role="dialog"] h2, div[role="dialog"] h3, div[role="dialog"] h4, div[role="dialog"] h5,
+    [data-testid="stDialog"] h1, [data-testid="stDialog"] h2, [data-testid="stDialog"] h3, [data-testid="stDialog"] h4, [data-testid="stDialog"] h5 {
+        background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
+        color: #C72C48 !important;
+    }
+    
+    /* ダイアログ内の警告・案内テキスト背景も調和させる */
+    div[role="dialog"] .stInfo, div[role="dialog"] .stSuccess, div[role="dialog"] .stWarning,
+    [data-testid="stDialog"] .stInfo, [data-testid="stDialog"] .stSuccess, [data-testid="stDialog"] .stWarning {
+        background-color: #FFF5F5 !important;
+        background: #FFF5F5 !important;
+    }
+    
     /* レスポンシブ強制適用 (どの端末でも比率を完全に均一化) */
     @media (max-width: 768px) {
         .block-container {
@@ -969,7 +998,9 @@ def show_tutorial_dialog():
         
         video_path = os.path.join(os.path.dirname(__file__), "tutorial_video.mp4")
         if os.path.exists(video_path):
-            st.video(video_path)
+            with open(video_path, "rb") as f:
+                video_bytes = f.read()
+            st.video(video_bytes)
             st.success("🎥 再生ボタンを押して、実際の操作の流れを確認してください。")
         else:
             st.info("💡 **デモ操作動画の埋め込みに対応しました！**\n\nスマホでアプリの操作画面を録画（画面収録）し、ファイル名を `tutorial_video.mp4` にしてこのプロジェクトフォルダに配置するだけで、ユーザーがこの場所で分かりやすい操作解説動画を再生できるようになります🎥🐾")
