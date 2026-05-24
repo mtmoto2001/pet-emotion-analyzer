@@ -1087,52 +1087,229 @@ if saved_profile and not is_admin and not st.session_state.get("logged_in"):
         
     st.stop()
 
-# サーバー側にプロフィールが無い場合、ブラウザの LocalStorage からの復元案内ボタンを提示
+# サーバー側にプロフィールが無い場合、ブラウザの LocalStorage からの復元案内・専用ウェルカムゲートを提示
 if not saved_profile:
     restore_html = f"""
-    <div id="restore-container" style="display: none; margin: 1rem 0; padding: 1.2rem; background: rgba(255, 123, 147, 0.1); border: 1px dashed rgba(255, 123, 147, 0.4); border-radius: 16px; text-align: center; box-shadow: 0 8px 32px 0 rgba(0,0,0,0.15);">
-        <p style="margin: 0 0 0.8rem 0; color: #C72C48; font-family: sans-serif; font-size: 0.95rem; font-weight: bold;">🐾 以前ご登録いただいたペットの情報が見つかりました！</p>
-        <a id="restore-link" href="#" target="_top" style="display: inline-block; padding: 0.75rem 1.8rem; background: linear-gradient(135deg, #FF8096 0%, #FFA87D 100%); color: #3D2D2D; font-family: sans-serif; font-size: 0.9rem; font-weight: bold; text-decoration: none; border-radius: 30px; box-shadow: 0 4px 15px rgba(255, 123, 147, 0.4); transition: transform 0.2s;">
-            前回のデータを復元して始める 🚀
-        </a>
-    </div>
-    <script>
-    try {{
-        const profile = localStorage.getItem("pet_profile");
-        const savedUserId = localStorage.getItem("pet_user_id");
-        if (profile) {{
-            const parsed = JSON.parse(profile);
-            if (parsed && parsed.name) {{
-                const container = document.getElementById("restore-container");
-                const link = document.getElementById("restore-link");
-                
-                // 親のURL（referrer）を取得。安全のため Streamlit Cloud の本番ドメインを検証・フォールバックに指定
-                let parentUrlStr = document.referrer;
-                if (!parentUrlStr || (parentUrlStr.indexOf("streamlit.app") === -1 && parentUrlStr.indexOf("localhost") === -1)) {{
-                    // クラウド本番ドメインに安全にフォールバック
-                    parentUrlStr = "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
-                }}
-                const parentUrl = new URL(parentUrlStr);
-                
-                // 復元用パラメータを付与
-                const encodedProfile = encodeURIComponent(profile);
-                parentUrl.searchParams.set("restore_profile", encodedProfile);
-                if (savedUserId) {{
-                    parentUrl.searchParams.set("user_id", savedUserId);
-                }} else {{
-                    parentUrl.searchParams.set("user_id", "{user_id}");
-                }}
-                
-                link.href = parentUrl.toString();
-                container.style.display = "block";
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <style>
+            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap');
+            
+            body {{
+                margin: 0;
+                padding: 10px;
+                font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+                background-color: transparent;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                min-height: 100vh;
+                box-sizing: border-box;
             }}
+            
+            .welcome-card {{
+                background: linear-gradient(135deg, #FFF0F2 0%, #FFF5F5 100%);
+                border: 2px solid rgba(255, 182, 193, 0.5);
+                border-radius: 24px;
+                padding: 2.5rem 2rem;
+                text-align: center;
+                box-shadow: 0 12px 40px rgba(255, 128, 150, 0.12);
+                max-width: 480px;
+                width: 100%;
+                box-sizing: border-box;
+                animation: fadeIn 0.6s ease-out;
+            }}
+            
+            @keyframes fadeIn {{
+                from {{ opacity: 0; transform: translateY(15px); }}
+                to {{ opacity: 1; transform: translateY(0); }}
+            }}
+            
+            .icon-badge {{
+                font-size: 3rem;
+                margin-bottom: 1rem;
+                display: inline-block;
+                animation: bounce 2s infinite;
+            }}
+            
+            @keyframes bounce {{
+                0%, 100% {{ transform: translateY(0); }}
+                50% {{ transform: translateY(-8px); }}
+            }}
+            
+            .title {{
+                color: #C72C48;
+                font-weight: 700;
+                font-size: 1.65rem;
+                margin: 0 0 0.5rem 0;
+            }}
+            
+            .subtitle {{
+                color: #3D2D2D;
+                font-weight: 600;
+                font-size: 1.15rem;
+                margin: 0 0 1.2rem 0;
+                line-height: 1.4;
+            }}
+            
+            .desc {{
+                color: #7D6363;
+                font-size: 0.9rem;
+                line-height: 1.6;
+                margin: 0 0 2rem 0;
+            }}
+            
+            .btn-restore {{
+                display: inline-block;
+                padding: 1rem 2.2rem;
+                background: linear-gradient(135deg, #C72C48 0%, #FF6B8B 100%);
+                color: #FFFFFF;
+                font-size: 1.05rem;
+                font-weight: bold;
+                text-decoration: none;
+                border-radius: 50px;
+                box-shadow: 0 6px 20px rgba(199, 44, 72, 0.3);
+                transition: all 0.3s ease;
+                border: none;
+                cursor: pointer;
+                outline: none;
+                width: 100%;
+                box-sizing: border-box;
+                margin-bottom: 1.2rem;
+            }}
+            
+            .btn-restore:hover {{
+                transform: translateY(-2px);
+                box-shadow: 0 10px 25px rgba(199, 44, 72, 0.45);
+            }}
+            
+            .btn-restore:active {{
+                transform: translateY(1px);
+            }}
+            
+            .link-register {{
+                color: #7D6363;
+                font-size: 0.85rem;
+                text-decoration: underline;
+                cursor: pointer;
+                background: none;
+                border: none;
+                padding: 0;
+                font-family: inherit;
+                transition: color 0.2s;
+            }}
+            
+            .link-register:hover {{
+                color: #C72C48;
+            }}
+        </style>
+    </head>
+    <body>
+        <div id="welcome-gate" class="welcome-card" style="display: none;">
+            <div class="icon-badge">🐾</div>
+            <h2 class="title">おかえりなさい！</h2>
+            <h3 id="pet-welcome-name" class="subtitle">ペットちゃんのお部屋へようこそ</h3>
+            <p class="desc">
+                以前ご登録いただいた思い出データとペット設定が見つかりました。<br>
+                下のボタンを押して、前回のデータを復元して始めましょう！
+            </p>
+            <a id="restore-link" href="#" target="_top" class="btn-restore">
+                前回のデータを復元して始める 🚀
+            </a>
+            <br>
+            <button id="btn-register-fresh" class="link-register">🆕 新しいペットを登録する</button>
+        </div>
+
+        <script>
+        try {{
+            const profile = localStorage.getItem("pet_profile");
+            const savedUserId = localStorage.getItem("pet_user_id");
+            
+            if (profile) {{
+                const parsed = JSON.parse(profile);
+                if (parsed && parsed.name) {{
+                    // このiframe自身に一意のIDを付与
+                    window.frameElement.id = 'restore-app-iframe';
+                    
+                    // 親ウィンドウの通常登録画面要素を非表示にするCSSを強制注入
+                    const style = window.parent.document.createElement('style');
+                    style.id = 'hide-registration-style';
+                    style.innerHTML = `
+                        /* すべての通常登録用エレメントを非表示にする */
+                        div[data-testid="stForm"], 
+                        .stTabs, 
+                        .sub-title, 
+                        .main-title, 
+                        .stAlert,
+                        iframe[title="streamlit.components.v1.html"]:not(#restore-app-iframe) {
+                            display: none !important;
+                        }
+                        /* 復元用の本iframeだけは表示するように制御 */
+                        #restore-app-iframe {
+                            display: block !important;
+                            border: none !important;
+                        }
+                    `;
+                    window.parent.document.head.appendChild(style);
+                    
+                    // ウェルカムテキストの更新
+                    const petNameText = document.getElementById("pet-welcome-name");
+                    if (parsed.owner_name) {{
+                        petNameText.innerText = parsed.owner_name + " 様 ＆ " + parsed.name + " ちゃんのお部屋🐾";
+                    }} else {{
+                        petNameText.innerText = parsed.name + " ちゃんのお部屋🐾";
+                    }}
+                    
+                    // 復元リンクURLの構築
+                    const link = document.getElementById("restore-link");
+                    let parentUrlStr = document.referrer;
+                    if (!parentUrlStr || (parentUrlStr.indexOf("streamlit.app") === -1 && parentUrlStr.indexOf("localhost") === -1)) {{
+                        parentUrlStr = "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
+                    }}
+                    const parentUrl = new URL(parentUrlStr);
+                    const encodedProfile = encodeURIComponent(profile);
+                    parentUrl.searchParams.set("restore_profile", encodedProfile);
+                    if (savedUserId) {{
+                        parentUrl.searchParams.set("user_id", savedUserId);
+                    }} else {{
+                        parentUrl.searchParams.set("user_id", "{user_id}");
+                    }}
+                    
+                    link.href = parentUrl.toString();
+                    
+                    // ゲートを表示
+                    document.getElementById("welcome-gate").style.display = "block";
+                    
+                    // 「新規登録する」ボタンの動作バインド
+                    document.getElementById("btn-register-fresh").addEventListener("click", function() {{
+                        // 非表示CSSを削除して登録画面を復活
+                        const parentStyle = window.parent.document.getElementById('hide-registration-style');
+                        if (parentStyle) parentStyle.remove();
+                        
+                        // このiframe自体を非表示にする
+                        window.frameElement.style.display = "none";
+                    }});
+                }} else {{
+                    // プロファイルが不完全なら非表示にして終了
+                    window.frameElement.style.display = "none";
+                }}
+            }} else {{
+                // プロファイルがなければ非表示にして終了
+                window.frameElement.style.display = "none";
+            }}
+        }} catch(e) {{
+            console.error("LocalStorage check failed:", e);
+            try {{
+                window.frameElement.style.display = "none";
+            }} catch(err) {{}}
         }}
-    }} catch(e) {{
-        console.error("LocalStorage check failed:", e);
-    }}
-    </script>
+        </script>
+    </body>
+    </html>
     """
-    components.html(restore_html, height=120)
+    components.html(restore_html, height=450)
 
 # --- 登録完了後に自動でチュートリアルを表示する処理 ---
 if st.session_state.get("show_tutorial_after_reg"):
