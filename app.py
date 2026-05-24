@@ -528,14 +528,6 @@ if app_icon_base64:
     """
     components.html(inject_icon_html, height=0, width=0)
 
-# --- ユーザーID（世帯ID）の自動生成とクエリパラメータ処理 ---
-if "user_id" not in st.query_params:
-    new_id = str(uuid.uuid4())[:8]
-    st.query_params["user_id"] = new_id
-    st.rerun()
-
-user_id = st.query_params["user_id"]
-
 # --- 管理者判定と専用ルーティング ---
 is_admin = st.query_params.get("admin") == "true"
 if is_admin:
@@ -627,6 +619,14 @@ if is_admin:
     """, unsafe_allow_html=True)
     render_admin_dashboard()
     st.stop()
+
+# --- ユーザーID（世帯ID）の自動生成とクエリパラメータ処理 ---
+if "user_id" not in st.query_params:
+    new_id = str(uuid.uuid4())[:8]
+    st.query_params["user_id"] = new_id
+    st.rerun()
+
+user_id = st.query_params["user_id"]
 
 # --- LocalStorage からのペット情報復元処理 ---
 if "restore_profile" in st.query_params:
