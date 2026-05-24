@@ -684,7 +684,9 @@ st.markdown("""
     /* ボタンの色デザインの統一 (背景薄い灰色、文字黒、枠線黒) */
     .stButton>button,
     div[data-testid="stFormSubmitButton"] button,
-    div[data-testid="stFileUploader"] button {
+    div[data-testid="stFileUploader"] button,
+    div.stLinkButton a,
+    div[data-testid="stLinkButton"] a {
         background: #E5E5E5 !important;
         color: #000000 !important;
         border: 1px solid #000000 !important;
@@ -693,18 +695,27 @@ st.markdown("""
         box-shadow: none !important;
         text-shadow: none !important;
         border-radius: 12px !important;
+        text-decoration: none !important;
+        display: inline-flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
     .stButton>button:hover,
     div[data-testid="stFormSubmitButton"] button:hover,
-    div[data-testid="stFileUploader"] button:hover {
+    div[data-testid="stFileUploader"] button:hover,
+    div.stLinkButton a:hover,
+    div[data-testid="stLinkButton"] a:hover {
         background: #D8D8D8 !important; /* ホバー時はわずかに暗い灰色 */
         color: #000000 !important;
         border: 1px solid #000000 !important;
+        text-decoration: none !important;
     }
     
-    /* 「思い出のストーリーをつくる」ボタン専用 of サイズ・配置調整 */
+    /* ボタン専用 of サイズ・配置調整 */
     .stButton>button,
-    div[data-testid="stFormSubmitButton"] button {
+    div[data-testid="stFormSubmitButton"] button,
+    div.stLinkButton a,
+    div[data-testid="stLinkButton"] a {
         padding: 0.95rem 2rem !important;
         transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
         width: 100% !important;
@@ -712,7 +723,9 @@ st.markdown("""
         letter-spacing: 0.5px;
     }
     .stButton>button:active,
-    div[data-testid="stFormSubmitButton"] button:active {
+    div[data-testid="stFormSubmitButton"] button:active,
+    div.stLinkButton a:active,
+    div[data-testid="stLinkButton"] a:active {
         transform: scale(0.97) !important;
     }
     
@@ -728,6 +741,7 @@ st.markdown("""
         color: #000000 !important;
         font-weight: 700 !important;
         display: block !important;
+        line-height: normal !important;
     }
     
     /* フルスクリーンローディング (システムの背景色に同調) */
@@ -788,22 +802,47 @@ st.markdown("""
         border: 1px solid rgba(255, 128, 150, 0.4) !important;
     }
     
-    /* セレクトボックスとオプションリストのライトテーマ強制 */
+    /* セレクトボックスとオプションリストのライトテーマ強制 ＆ 視認性完全強化 */
     div[data-baseweb="select"] > div {
         background-color: #FFFFFF !important;
         color: #3D2D2D !important;
         border: 1px solid rgba(255, 128, 150, 0.4) !important;
     }
-    div[role="listbox"] {
+    
+    /* ドロップダウンメニュー全体の背景を白に徹底固定 */
+    div[role="listbox"],
+    ul[role="listbox"],
+    div[data-baseweb="popover"],
+    div[data-baseweb="menu"],
+    [data-baseweb="menu"] ul,
+    ul[data-baseweb="menu"] {
         background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
+        border: 1px solid rgba(255, 128, 150, 0.4) !important;
     }
-    div[role="listbox"] li, div[role="option"] {
+    
+    /* ドロップダウン項目のテキストと背景を明示的に強制指定 */
+    div[role="listbox"] li,
+    ul[role="listbox"] li,
+    div[role="option"],
+    [role="option"] *,
+    [data-baseweb="menu"] li,
+    [data-baseweb="menu"] li * {
         background-color: #FFFFFF !important;
+        background: #FFFFFF !important;
         color: #3D2D2D !important;
     }
-    div[role="listbox"] li:hover, div[role="option"]:hover,
-    div[role="listbox"] li[aria-selected="true"] {
+    
+    /* リスト項目のホバー・アクティブ状態の配色 */
+    div[role="listbox"] li:hover,
+    ul[role="listbox"] li:hover,
+    div[role="option"]:hover,
+    [data-baseweb="menu"] li:hover,
+    [data-baseweb="menu"] li:hover *,
+    div[role="listbox"] li[aria-selected="true"],
+    ul[role="listbox"] li[aria-selected="true"] {
         background-color: #FFF5F5 !important;
+        background: #FFF5F5 !important;
         color: #C72C48 !important;
     }
     
