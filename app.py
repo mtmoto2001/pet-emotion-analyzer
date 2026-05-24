@@ -52,13 +52,13 @@ def render_admin_dashboard():
     error_rate = (error_count / total_generations * 100) if total_generations > 0 else 0.0
 
     with col_kpi1:
-        st.markdown(f'<div class="status-card" style="border-left: 4px solid #00E6FF; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: white;">{total_households}</div><div style="font-size: 0.8rem; color: #94A3B8;">登録世帯数 (スマホ)</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="status-card" style="border-left: 4px solid #00E6FF; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: var(--text-color);">{total_households}</div><div style="font-size: 0.8rem; color: var(--text-color); opacity: 0.7;">登録世帯数 (スマホ)</div></div>', unsafe_allow_html=True)
     with col_kpi2:
-        st.markdown(f'<div class="status-card" style="border-left: 4px solid #FFB800; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: white;">{total_generations}</div><div style="font-size: 0.8rem; color: #94A3B8;">思い出ストーリー生成数</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="status-card" style="border-left: 4px solid #FFB800; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: var(--text-color);">{total_generations}</div><div style="font-size: 0.8rem; color: var(--text-color); opacity: 0.7;">思い出ストーリー生成数</div></div>', unsafe_allow_html=True)
     with col_kpi3:
-        st.markdown(f'<div class="status-card" style="border-left: 4px solid #FF4A4A; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: white;">{error_count}</div><div style="font-size: 0.8rem; color: #94A3B8;">システムエラー数</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="status-card" style="border-left: 4px solid #FF4A4A; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: var(--text-color);">{error_count}</div><div style="font-size: 0.8rem; color: var(--text-color); opacity: 0.7;">システムエラー数</div></div>', unsafe_allow_html=True)
     with col_kpi4:
-        st.markdown(f'<div class="status-card" style="border-left: 4px solid #A652FF; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: white;">{error_rate:.1f}%</div><div style="font-size: 0.8rem; color: #94A3B8;">APIエラー率</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="status-card" style="border-left: 4px solid #A652FF; text-align: center;"><div style="font-size: 1.8rem; font-weight: bold; color: var(--text-color);">{error_rate:.1f}%</div><div style="font-size: 0.8rem; color: var(--text-color); opacity: 0.7;">APIエラー率</div></div>', unsafe_allow_html=True)
 
     tab_dash, tab_house, tab_api, tab_log = st.tabs(["📈 利用統計", "🏡 登録世帯一覧", "🔑 API疎通テスト", "📝 サーバー生ログ"])
     
@@ -171,8 +171,54 @@ def mask_error_message(err_msg):
         
     return "思い出の読み込み中に少しエラーが起きてしまいました🐾 もう一度だけ「思い出のストーリーをつくる」を押してみてください。"
 
+# --- ページのカスタムアイコン読込 ＆ PWAホームアイコン設定 ---
+icon_image = "🐾"
+app_icon_base64 = ""
+try:
+    from PIL import Image
+    import base64
+    icon_path = os.path.join(os.path.dirname(__file__), "app_icon.png")
+    if os.path.exists(icon_path):
+        icon_image = Image.open(icon_path)
+        with open(icon_path, "rb") as f:
+            app_icon_base64 = base64.b64encode(f.read()).decode("utf-8")
+except Exception as e:
+    pass
+
 # --- ページ設定 ---
-st.set_page_config(page_title="うちのコ日常アルバム - Pet Daily AI", page_icon="🐾", layout="wide")
+st.set_page_config(page_title="うちのコ日常アルバム - Pet Daily AI", page_icon=icon_image, layout="wide")
+
+# PWA用のホーム画面追加アイコンをHTMLのheadに強制注入
+if app_icon_base64:
+    inject_icon_html = f"""
+    <script>
+        try {{
+            const iconBase64 = "data:image/png;base64,{app_icon_base64}";
+            
+            // iOSの「ホーム画面に追加」アイコン
+            let appleLink = document.querySelector("link[rel='apple-touch-icon']");
+            if (!appleLink) {{
+                appleLink = document.createElement("link");
+                appleLink.rel = "apple-touch-icon";
+                document.head.appendChild(appleLink);
+            }}
+            appleLink.href = iconBase64;
+
+            // Android/Chromeのショートカットアイコン
+            let favLink = document.querySelector("link[rel='icon']");
+            if (!favLink) {{
+                favLink = document.createElement("link");
+                favLink.rel = "icon";
+                document.head.appendChild(favLink);
+            }}
+            favLink.href = iconBase64;
+            favLink.sizes = "192x192";
+        }} catch (e) {{
+            console.error("Failed to inject app icon:", e);
+        }}
+    </script>
+    """
+    components.html(inject_icon_html, height=0, width=0)
 
 # --- ユーザーID（世帯ID）の自動生成とクエリパラメータ処理 ---
 if "user_id" not in st.query_params:
@@ -238,6 +284,8 @@ st.markdown("""
         margin-bottom: 1.2rem !important;
         border: 1px solid rgba(255, 128, 150, 0.4) !important;
         box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+    }
+    .status-card, .status-card * {
         color: var(--text-color) !important;
     }
     
@@ -248,12 +296,14 @@ st.markdown("""
         border-radius: 14px !important; 
         padding: 1.4rem !important; 
         margin-top: 1rem !important; 
-        color: var(--text-color) !important; 
         white-space: pre-wrap !important; 
         font-size: 1.05rem !important; 
         line-height: 1.9 !important;
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.05);
         border: 1px solid rgba(255, 128, 150, 0.25) !important;
+    }
+    .line-preview-box, .line-preview-box * {
+        color: var(--text-color) !important; 
     }
     
     /* 親しみやすい透過入力フォーム */
@@ -282,21 +332,16 @@ st.markdown("""
         background: transparent !important;
     }
     div[data-testid="stFileUploader"] label {
-        color: #FF8096 !important;
+        color: #C72C48 !important;
         font-weight: bold !important;
         font-size: 1rem !important;
         margin-bottom: 0.5rem !important;
     }
     
-    /* 全てのテキスト・ラベルの文字色をシステムの主文字色に完全同期（白背景なら黒文字、黒背景なら白文字） */
-    label, p, span, li, h1, h2, h3, h4, h5, h6, .stMarkdown, .stText {
-        color: var(--text-color) !important;
-    }
-    
-    /* タッチミスを防ぐ大きくて美しい親指ファーストボタン (サクラローズゴールド) */
+    /* タッチミスを防ぐ大きくて美しい親指ファーストボタン (サクラローズゴールド + 高コントラストココアブラウン文字) */
     .stButton>button {
         background: linear-gradient(135deg, #FF8096 0%, #FFA87D 100%) !important;
-        color: white !important;
+        color: #3D2D2D !important;
         font-weight: 700 !important;
         border: none !important;
         border-radius: 14px !important;
@@ -307,7 +352,7 @@ st.markdown("""
         cursor: pointer !important;
         box-shadow: 0 6px 20px rgba(255, 128, 150, 0.3) !important;
         letter-spacing: 0.5px;
-        text-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        text-shadow: 0 1px 1px rgba(255,255,255,0.4);
     }
     .stButton>button:hover {
         opacity: 0.95 !important;
@@ -376,16 +421,6 @@ st.markdown("""
         border: 1px solid rgba(255, 128, 150, 0.4) !important;
     }
     
-    /* セレクトボックスの文字色と背景色の強制固定 */
-    div[data-baseweb="select"] > div {
-        background-color: var(--background-color) !important;
-        color: var(--text-color) !important;
-    }
-    div[role="listbox"] li, div[role="option"] {
-        background-color: var(--background-color) !important;
-        color: var(--text-color) !important;
-    }
-    
     /* アコーディオン・エキスパンダーのヘッダーと中身の視認性確保 */
     div[data-testid="stExpander"] {
         background-color: var(--secondary-background-color) !important;
@@ -393,23 +428,8 @@ st.markdown("""
         border-radius: 14px !important;
     }
     div[data-testid="stExpander"] summary {
-        color: #FF8096 !important;
+        color: #C72C48 !important;
         font-weight: bold !important;
-    }
-    div[data-testid="stExpander"] p,
-    div[data-testid="stExpander"] span,
-    div[data-testid="stExpander"] li {
-        color: var(--text-color) !important;
-    }
-
-    /* Streamlitネイティブのアラートボックス（st.info, st.warning, st.error, st.success）の文字色と背景色を強制指定 */
-    div[data-testid="stAlert"] {
-        background-color: var(--secondary-background-color) !important;
-        border: 1px solid rgba(255, 128, 150, 0.4) !important;
-        border-radius: 14px !important;
-    }
-    div[data-testid="stAlert"] * {
-        color: var(--text-color) !important;
     }
 
     /* タブの文字色と背景色の強制指定 */
@@ -419,8 +439,8 @@ st.markdown("""
         opacity: 0.7 !important;
     }
     button[data-baseweb="tab"][aria-selected="true"] {
-        color: #FF8096 !important;
-        border-bottom-color: #FF8096 !important;
+        color: #C72C48 !important;
+        border-bottom-color: #C72C48 !important;
         opacity: 1.0 !important;
     }
     
@@ -519,8 +539,8 @@ is_admin = st.query_params.get("admin") == "true"
 if not saved_profile:
     restore_html = f"""
     <div id="restore-container" style="display: none; margin: 1rem 0; padding: 1.2rem; background: rgba(255, 123, 147, 0.1); border: 1px dashed rgba(255, 123, 147, 0.4); border-radius: 16px; text-align: center; box-shadow: 0 8px 32px 0 rgba(0,0,0,0.15);">
-        <p style="margin: 0 0 0.8rem 0; color: #FFB88C; font-family: sans-serif; font-size: 0.95rem; font-weight: bold; text-shadow: 0 1px 2px rgba(0,0,0,0.5);">🐾 以前ご登録いただいたペットの情報が見つかりました！</p>
-        <a id="restore-link" href="#" target="_top" style="display: inline-block; padding: 0.75rem 1.8rem; background: linear-gradient(135deg, #FF7B93 0%, #FFB88C 100%); color: #0B0F19; font-family: sans-serif; font-size: 0.9rem; font-weight: bold; text-decoration: none; border-radius: 30px; box-shadow: 0 4px 15px rgba(255, 123, 147, 0.4); transition: transform 0.2s;">
+        <p style="margin: 0 0 0.8rem 0; color: #C72C48; font-family: sans-serif; font-size: 0.95rem; font-weight: bold;">🐾 以前ご登録いただいたペットの情報が見つかりました！</p>
+        <a id="restore-link" href="#" target="_top" style="display: inline-block; padding: 0.75rem 1.8rem; background: linear-gradient(135deg, #FF8096 0%, #FFA87D 100%); color: #3D2D2D; font-family: sans-serif; font-size: 0.9rem; font-weight: bold; text-decoration: none; border-radius: 30px; box-shadow: 0 4px 15px rgba(255, 123, 147, 0.4); transition: transform 0.2s;">
             前回のデータを復元して始める 🚀
         </a>
     </div>
@@ -659,7 +679,7 @@ with st.sidebar:
         app_url = f"https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/?user_id={user_id}"
         st.markdown("### 🔗 あなた専用のアルバムURL")
         st.markdown(f"""
-        <div style="background: rgba(255,255,255,0.05); padding: 0.8rem; border-radius: 12px; border: 1px solid rgba(255,255,255,0.1); font-size: 0.75rem; margin-bottom: 0.5rem; word-break: break-all; font-family: monospace;">
+        <div style="background: var(--background-color); padding: 0.8rem; border-radius: 12px; border: 1px solid rgba(255, 128, 150, 0.25); font-size: 0.75rem; margin-bottom: 0.5rem; word-break: break-all; font-family: monospace; color: var(--text-color);">
             {app_url}
         </div>
         """, unsafe_allow_html=True)
@@ -667,7 +687,7 @@ with st.sidebar:
         # クリップボードコピー機能用のボタン
         copy_js = f"""
         <div style="text-align: center; width: 100%;">
-            <button onclick="copyUrl()" style="width: 100%; padding: 0.65rem; background: linear-gradient(135deg, #FF7B93 0%, #FFB88C 100%); color: #0B0F19; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(255, 123, 147, 0.3);">
+            <button onclick="copyUrl()" style="width: 100%; padding: 0.65rem; background: linear-gradient(135deg, #FF8096 0%, #FFA87D 100%); color: #3D2D2D; font-weight: bold; border: none; border-radius: 10px; cursor: pointer; font-size: 0.85rem; box-shadow: 0 4px 12px rgba(255, 123, 147, 0.3);">
                 📋 専用URLをコピーする
             </button>
         </div>
@@ -833,7 +853,7 @@ GOOGLE_API_KEY = input_google if input_google else saved_config.get("GOOGLE_API_
 def show_profile_dialog():
     st.markdown("""
     <div style="background: linear-gradient(135deg, #FFF0F2 0%, #FFF5F5 100%); padding: 1.5rem; border-radius: 20px; border: 1px solid rgba(255, 182, 193, 0.4); margin-bottom: 1.5rem; box-shadow: 0 8px 32px rgba(255, 128, 150, 0.08);">
-        <h2 style="color: #FF8096; margin: 0; font-weight: bold; font-size: 1.6rem; text-align: center;">🐾 ようこそ、うちのコ日常アルバムへ！</h2>
+        <h2 style="color: #C72C48; margin: 0; font-weight: bold; font-size: 1.6rem; text-align: center;">🐾 ようこそ、うちのコ日常アルバムへ！</h2>
         <p style="color: #7D6363; font-size: 0.9rem; margin-top: 0.4rem; margin-bottom: 0; text-align: center;">愛するうちのコの基本設定、または以前の登録データからのログインを行ってください。</p>
     </div>
     """, unsafe_allow_html=True)
@@ -1074,8 +1094,8 @@ with col1:
                           <source src="data:video/mp4;base64,{video_base64}" type="video/mp4">
                           Your browser does not support the video tag.
                         </video>
-                        <h3 style="color: #FF7B93; margin-top: 0.5rem; font-weight: bold; font-size: 1.4rem;">心を込めて執筆中...🐾</h3>
-                        <p style="color: #94A3B8; font-size: 0.95rem; line-height: 1.6; margin-top: 0.8rem; margin-bottom: 0;">
+                        <h3 style="color: #C72C48; margin-top: 0.5rem; font-weight: bold; font-size: 1.4rem;">心を込めて執筆中...🐾</h3>
+                        <p style="color: var(--text-color); opacity: 0.85; font-size: 0.95rem; line-height: 1.6; margin-top: 0.8rem; margin-bottom: 0;">
                           AIが思い出の写真から本当の気持ちを読み解き、特別なショートストーリーを創作しています。<br>10〜30秒ほど楽しみにお待ちください。
                         </p>
                       </div>
@@ -1196,7 +1216,7 @@ with col2:
                 }}
             </style>
             <textarea id="promptText" readonly>{manga_prompt_text}</textarea>
-            <button onclick="copyToClipboard()" style="background: linear-gradient(135deg, #FF8096 0%, #FFA87D 100%); color: white; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; font-size: 15px; width: 100%; transition: opacity 0.2s;">📋 プロンプトをコピーする</button>
+            <button onclick="copyToClipboard()" style="background: linear-gradient(135deg, #FF8096 0%, #FFA87D 100%); color: #3D2D2D; border: none; border-radius: 8px; padding: 12px; font-weight: bold; cursor: pointer; font-size: 15px; width: 100%; transition: opacity 0.2s;">📋 プロンプトをコピーする</button>
         </div>
         <script>
         function copyToClipboard() {{
