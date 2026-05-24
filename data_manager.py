@@ -108,3 +108,17 @@ def load_all_profiles():
     except:
         pass
     return profiles
+
+def generate_user_id(owner_name, pin_code):
+    """
+    飼い主のおなまえと4桁のPINから一意の user_id を生成する。
+    これにより、通常URLやPWA擬似ネイティブで起動した際でも、なまえとPINを入れるだけで
+    完璧に同一の user_id に紐付くペット情報や思い出履歴を復元・永続化できる。
+    """
+    import hashlib
+    if not owner_name or not pin_code:
+        return None
+    name_clean = str(owner_name).strip().replace(" ", "").replace("　", "")
+    pin_clean = str(pin_code).strip()
+    raw_str = f"{name_clean}_{pin_clean}"
+    return hashlib.md5(raw_str.encode('utf-8')).hexdigest()[:12]
