@@ -61,6 +61,9 @@
       font-size: 17px;
       margin-bottom: 24px;
       box-shadow: 0 8px 20px rgba(199, 44, 72, 0.3);
+      cursor: pointer;
+      border: none;
+      width: 100%;
       transition: background-color 0.2s, transform 0.1s;
     }
     .btn-launch:active {
@@ -109,10 +112,10 @@
     <div class="badge">うちのコ日常アルバム🐾</div>
     <span style="font-size: 56px; display: block; margin-bottom: 12px;">🐾</span>
     <h1>最新バージョン起動</h1>
-    <p>愛犬・愛猫の写真から心の声を紡ぎ出し、特別なストーリーを創作するアプリが立ち上がります🐾</p>
+    <p>思い出の写真から心の声を紡ぎ出し、特別なストーリーを創作するアプリが立ち上がります🐾</p>
     
-    <!-- 🚀 アプリ起動ボタン -->
-    <a href="exp://nw0ig38-anonymous-8081.exp.direct" class="btn-launch">⚡ アプリを起動する (1タップ)</a>
+    <!-- 🚀 アプリ起動ボタン (ディープリンク自動スクリプト) -->
+    <button onclick="launchApp();" class="btn-launch">⚡ アプリを起動する (1タップ)</button>
     
     <div class="store-container">
       <div class="store-title">⚠️ アプリが起動しない・未インストールの方</div>
@@ -122,5 +125,38 @@
       </div>
     </div>
   </div>
+
+  <script>
+    function launchApp() {
+      var scheme = "exp://nw0ig38-anonymous-8081.exp.direct";
+      
+      // 1. 直接カスタムスキームをトリガー
+      window.location.href = scheme;
+      
+      // 2. 一部ブラウザ向けのバックアップトリガー (iframe)
+      try {
+        var iframe = document.createElement("iframe");
+        iframe.style.border = "none";
+        iframe.style.width = "1px";
+        iframe.style.height = "1px";
+        iframe.src = scheme;
+        document.body.appendChild(iframe);
+      } catch (e) {
+        console.error(e);
+      }
+      
+      // 3. 反応がない場合のストア自動フォールバック (3秒後)
+      setTimeout(function() {
+        if (!document.hidden) {
+          var isAndroid = /Android/i.test(navigator.userAgent);
+          if (isAndroid) {
+            window.location.href = "https://play.google.com/store/apps/details?id=host.exp.exponent";
+          } else {
+            window.location.href = "https://apps.apple.com/app/expo-go/id984023788";
+          }
+        }
+      }, 3000);
+    }
+  </script>
 </body>
 </html>

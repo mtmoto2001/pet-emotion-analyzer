@@ -13,7 +13,7 @@ export default function AlbumScreen() {
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [storyMode, setStoryMode] = useState<'novel' | 'chat'>('novel');
   const [genre, setGenre] = useState('ほのぼの日常風');
-  const [proxyUrl, setProxyUrl] = useState('https://script.google.com/macros/s/AKfycbyUsA6Iq1MAM4uuxRG5hRLxBdoN4FjYH6Q_9Qtga79kTkF4MTCmgMyqYMoUkP4L_gWy3Q/exec');
+  const [proxyUrl, setProxyUrl] = useState('https://script.google.com/macros/s/AKfycbxSlp-70G9JZPPY10bTyClN77X-3w3jgUBpLRavlG21HMmj__zzgsObZv5jbSJ4-zp35Q/exec');
   const [showSettings, setShowSettings] = useState(false);
 
   // 生成結果用State
