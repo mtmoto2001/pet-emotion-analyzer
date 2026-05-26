@@ -76,6 +76,58 @@ def get_profile(user_id):
         
     return jsonify(profile)
 
+import requests
+
+@app.route("/api/generate", methods=["POST"])
+def generate_story():
+    """
+    スマホアプリからリクエストを受け取り、PC上のGoogle Gemini APIキーを使用して
+    Gemini APIを叩き、その結果をスマホに返します。APIキーはスマホ側に露出されません。
+    """
+    data = request.json or {}
+    prompt = data.get("prompt")
+    image_base64 = data.get("imageBase64")
+    
+    if not prompt or not image_base64:
+        return jsonify({"error": "Missing prompt or imageBase64🐾"}), 400
+        
+    config = data_manager.load_config()
+    api_key = config.get("GOOGLE_API_KEY", "")
+    if not api_key:
+        return jsonify({"error": "Gemini API key is not registered on admin PC🐾"}), 500
+
+    try:
+        url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={api_key}"
+        headers = {
+            "Content-Type": "application/json"
+        }
+        body = {
+            "contents": [
+                {
+                    "parts": [
+                        { "text": prompt },
+                        {
+                            "inlineData": {
+                                "mimeType": "image/jpeg",
+                                "data": image_base64
+                            }
+                        }
+                    ]
+                }
+            ],
+            "generationConfig": {
+                "responseMimeType": "application/json"
+            }
+        }
+        
+        response = requests.post(url, headers=headers, json=body)
+        if response.status_code != 200:
+            return jsonify({"error": f"Gemini API Error: {response.text}"}), response.status_code
+            
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == "__main__":
     # ポート 8082 で起動し、外部（同じWi-Fi内のスマホ等）からのアクセスを受け入れます
     app.run(host="0.0.0.0", port=8082, debug=False)

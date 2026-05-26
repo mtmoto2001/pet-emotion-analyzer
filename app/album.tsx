@@ -13,7 +13,7 @@ export default function AlbumScreen() {
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [storyMode, setStoryMode] = useState<'novel' | 'chat'>('novel');
   const [genre, setGenre] = useState('ほのぼの日常風');
-  const [proxyUrl, setProxyUrl] = useState('https://pet-emotion-analyzer.vercel.app/api/generate');
+  const [proxyUrl, setProxyUrl] = useState('https://script.google.com/macros/s/AKfycbyUsA6Iq1MAM4uuxRG5hRLxBdoN4FjYH6Q_9Qtga79kTkF4MTCmgMyqYMoUkP4L_gWy3Q/exec');
   const [showSettings, setShowSettings] = useState(false);
 
   // 生成結果用State
@@ -145,6 +145,9 @@ export default function AlbumScreen() {
       }
 
       const resData = await response.json();
+      if (resData.error) {
+        throw new Error(resData.error);
+      }
       const textResult = resData.candidates[0].part?.text || resData.candidates[0].content.parts[0].text;
       const parsedResult = JSON.parse(textResult);
 
