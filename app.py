@@ -1146,7 +1146,7 @@ if not saved_profile:
             <div class="icon-badge">🐾</div>
             <h2 class="title">おかえりなさい！</h2>
             <h3 id="pet-welcome-name" class="subtitle">ペットちゃんのお部屋へようこそ</h3>
-            <a id="restore-link" href="#" class="btn-restore">ログインへ 🚀</a>
+            <a id="restore-link" href="#" target="_top" class="btn-restore">ログインへ 🚀</a>
             <br>
             <button id="btn-register-fresh" class="link-register">🆕 新しいペットを登録する</button>
         </div>
@@ -1164,15 +1164,30 @@ if not saved_profile:
                         petNameText.innerText = parsed.name + " ちゃんのお部屋🐾";
                     }}
                     const link = document.getElementById("restore-link");
+                    let parentUrl = "";
                     try {{
-                        let baseUrl = window.top.location.href.split("?")[0];
-                        link.href = baseUrl + "?user_id=" + encodeURIComponent(savedUserId);
+                        parentUrl = window.top.location.href.split("?")[0];
                     }} catch(e) {{
-                        link.href = "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/?user_id=" + encodeURIComponent(savedUserId);
+                        parentUrl = document.referrer ? document.referrer.split("?")[0] : "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
                     }}
+                    link.href = parentUrl + "?user_id=" + encodeURIComponent(savedUserId);
+                    
                     document.getElementById("welcome-gate").style.display = "block";
                     document.getElementById("btn-register-fresh").addEventListener("click", function() {{
-                        document.getElementById("welcome-gate").style.display = "none";
+                        try {{
+                            localStorage.removeItem("pet_profile");
+                            localStorage.removeItem("pet_user_id");
+                            let resetUrl = "";
+                            try {{
+                                resetUrl = window.top.location.href.split("?")[0];
+                            }} catch(err) {{
+                                resetUrl = document.referrer ? document.referrer.split("?")[0] : "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
+                            }}
+                            window.top.location.href = resetUrl;
+                        }} catch(err) {{
+                            console.error(err);
+                            document.getElementById("welcome-gate").style.display = "none";
+                        }}
                     }});
                 }}
             }}
