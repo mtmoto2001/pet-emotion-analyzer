@@ -1169,16 +1169,21 @@ if not saved_profile:
         <script>
         try {
             const savedUserId = localStorage.getItem("pet_user_id");
-            let parentUrl = "";
-            try {
-                parentUrl = document.referrer ? document.referrer.split("?")[0] : window.location.href.split("?")[0];
-            } catch(e) {
-                parentUrl = "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
-            }
             if (savedUserId) {
+                let parentUrl = "";
+                try {
+                    // Try to read top URL first (works on localhost)
+                    parentUrl = window.top.location.href.split("?")[0];
+                } catch(e) {
+                    // Fallback to document.referrer (works on Streamlit Cloud)
+                    if (document.referrer) {
+                        parentUrl = document.referrer.split("?")[0];
+                    } else {
+                        // Ultimate fallback to production URL
+                        parentUrl = "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
+                    }
+                }
                 window.top.location.href = parentUrl + "?user_id=" + encodeURIComponent(savedUserId) + "&welcome=1";
-            } else {
-                window.top.location.href = parentUrl + "?new_registration=1";
             }
         } catch(e) {
             console.error("Auto-redirect failed:", e);
@@ -1186,7 +1191,6 @@ if not saved_profile:
         </script>
         """
         components.html(auto_redirect_html, height=0, width=0)
-        st.stop()
 
 # --- 登録完了後に自動でチュートリアルを表示する処理 ---
 if st.session_state.get("show_tutorial_after_reg"):
