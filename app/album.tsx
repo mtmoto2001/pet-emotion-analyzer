@@ -148,8 +148,20 @@ export default function AlbumScreen() {
       if (resData.error) {
         throw new Error(resData.error);
       }
-      const textResult = resData.candidates[0].part?.text || resData.candidates[0].content.parts[0].text;
-      const parsedResult = JSON.parse(textResult);
+      const textResult = resData.candidates?.[0]?.content?.parts?.[0]?.text || 
+                         resData.candidates?.[0]?.part?.text;
+
+      if (!textResult) {
+        throw new Error('AIからの応答テキストが空でした🐾');
+      }
+
+      // ```json ... ``` のマークダウン囲みを安全に除去するサニタイズ処理
+      let cleanedText = textResult.trim();
+      if (cleanedText.startsWith('```')) {
+        cleanedText = cleanedText.replace(/^```json\s*/i, '').replace(/```$/, '').trim();
+      }
+
+      const parsedResult = JSON.parse(cleanedText);
 
       setFeelings(parsedResult.feelings);
       setStory(parsedResult.story);
