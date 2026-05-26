@@ -1224,15 +1224,13 @@ if is_admin:
 
 # --- LocalStorageへの保存トリガーJSの出力 ---
 if "save_profile_to_localstorage" in st.session_state:
-    profile_to_save = st.session_state.pop("save_profile_to_localstorage")
-    import json
-    profile_json = json.dumps(profile_to_save, ensure_ascii=False).replace("'", "\\'")
+    st.session_state.pop("save_profile_to_localstorage")
     
     # Use parent-level img onerror hack to write securely to parent localStorage
+    # We only need to write 'pet_user_id' as the profile is loaded natively on the server-side!
     st.markdown(f"""
     <img src="x" onerror="
         try {{
-            localStorage.setItem('pet_profile', '{profile_json}');
             localStorage.setItem('pet_user_id', '{user_id}');
         }} catch(e) {{
             console.error('Parent localStorage save failed:', e);
