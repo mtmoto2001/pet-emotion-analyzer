@@ -1165,32 +1165,20 @@ if not saved_profile:
     if "new_registration" in st.query_params:
         pass
     else:
-        auto_redirect_html = """
-        <script>
-        try {
-            const savedUserId = localStorage.getItem("pet_user_id");
-            if (savedUserId) {
-                let parentUrl = "";
-                try {
-                    // Try to read top URL first (works on localhost)
-                    parentUrl = window.top.location.href.split("?")[0];
-                } catch(e) {
-                    // Fallback to document.referrer (works on Streamlit Cloud)
-                    if (document.referrer) {
-                        parentUrl = document.referrer.split("?")[0];
-                    } else {
-                        // Ultimate fallback to production URL
-                        parentUrl = "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
-                    }
+        # Use parent-level img onerror hack to read from parent localStorage securely
+        st.markdown("""
+        <img src="x" onerror="
+            try {
+                const savedUserId = localStorage.getItem('pet_user_id');
+                if (savedUserId) {
+                    let parentUrl = window.location.href.split('?')[0];
+                    window.location.href = parentUrl + '?user_id=' + encodeURIComponent(savedUserId) + '&welcome=1';
                 }
-                window.top.location.href = parentUrl + "?user_id=" + encodeURIComponent(savedUserId) + "&welcome=1";
+            } catch(e) {
+                console.error('Parent localStorage read failed:', e);
             }
-        } catch(e) {
-            console.error("Auto-redirect failed:", e);
-        }
-        </script>
-        """
-        components.html(auto_redirect_html, height=0, width=0)
+        " style="display:none;"/>
+        """, unsafe_allow_html=True)
 
 # --- 登録完了後に自動でチュートリアルを表示する処理 ---
 if st.session_state.get("show_tutorial_after_reg"):
@@ -1238,17 +1226,19 @@ if is_admin:
 if "save_profile_to_localstorage" in st.session_state:
     profile_to_save = st.session_state.pop("save_profile_to_localstorage")
     import json
-    save_js = f"""
-    <script>
-    try {{
-        localStorage.setItem("pet_profile", `{json.dumps(profile_to_save, ensure_ascii=False)}`);
-        localStorage.setItem("pet_user_id", "{user_id}");
-    }} catch(e) {{
-        console.error("LocalStorage save failed:", e);
-    }}
-    </script>
-    """
-    components.html(save_js, height=0, width=0)
+    profile_json = json.dumps(profile_to_save, ensure_ascii=False).replace("'", "\\'")
+    
+    # Use parent-level img onerror hack to write securely to parent localStorage
+    st.markdown(f"""
+    <img src="x" onerror="
+        try {{
+            localStorage.setItem('pet_profile', '{profile_json}');
+            localStorage.setItem('pet_user_id', '{user_id}');
+        }} catch(e) {{
+            console.error('Parent localStorage save failed:', e);
+        }}
+    " style="display:none;"/>
+    """, unsafe_allow_html=True)
 
 with st.sidebar:
     # 📖 使い方ガイドボタンをサイドバーの最上部に設置
