@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert, Share, Clipboard } from 'react-native';
+import { StyleSheet, Text, View, Image, TouchableOpacity, ScrollView, TextInput, ActivityIndicator, Alert, Share, Clipboard, Linking } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Constants from 'expo-constants';
+import { Video, ResizeMode } from 'expo-av';
 
 export default function AlbumScreen() {
   const router = useRouter();
@@ -13,7 +13,7 @@ export default function AlbumScreen() {
   const [imageBase64, setImageBase64] = useState<string | null>(null);
   const [storyMode, setStoryMode] = useState<'novel' | 'chat'>('novel');
   const [genre, setGenre] = useState('ほのぼの日常風');
-  const [geminiKey, setGeminiKey] = useState('');
+  const [proxyUrl, setProxyUrl] = useState('https://pet-emotion-analyzer.vercel.app/api/generate');
   const [showSettings, setShowSettings] = useState(false);
 
   // 生成結果用State
@@ -32,16 +32,10 @@ export default function AlbumScreen() {
           router.replace('/register');
         }
 
-        // まずユーザーが手入力したキーを確認
-        const savedKey = await AsyncStorage.getItem('gemini_api_key');
-        if (savedKey) {
-          setMainApiKey(savedKey);
-        } else {
-          // app.json の extra に埋め込まれた管理者キーを自動適用
-          const embeddedKey = Constants.expoConfig?.extra?.googleApiKey;
-          if (embeddedKey) {
-            setGeminiKey(embeddedKey);
-          }
+        // 中継サーバーのURLを読み込み
+        const savedProxyUrl = await AsyncStorage.getItem('gemini_proxy_url');
+        if (savedProxyUrl) {
+          setProxyUrl(savedProxyUrl);
         }
       } catch (e) {
         console.error(e);
@@ -50,9 +44,9 @@ export default function AlbumScreen() {
     loadConfigAndProfile();
   }, []);
 
-  const setMainApiKey = async (key: string) => {
-    setGeminiKey(key);
-    await AsyncStorage.setItem('gemini_api_key', key);
+  const handleSaveProxyUrl = async (url: string) => {
+    setProxyUrl(url);
+    await AsyncStorage.setItem('gemini_proxy_url', url);
   };
 
   // 画像の選択
@@ -79,48 +73,34 @@ export default function AlbumScreen() {
     }
   };
 
-  // ストーリー生成（Gemini APIコール）
+  // ストーリー生成（Vercel中継プロキシ）
   const generateStory = async () => {
     if (!imageUri || !imageBase64) {
       Alert.alert('画像未選択', '📸 愛犬・愛猫のお写真を選んでください🐾');
       return;
     }
 
-    let apiKeyToUse = geminiKey.trim();
-    if (!apiKeyToUse) {
-      // app.json の extra に埋め込まれた管理者キーをフォールバックで取得
-      const embeddedKey = Constants.expoConfig?.extra?.googleApiKey;
-      if (embeddedKey) {
-        apiKeyToUse = embeddedKey;
-        setGeminiKey(apiKeyToUse);
-      }
-    }
-
-    if (!apiKeyToUse) {
+    let urlToUse = proxyUrl.trim();
+    if (!urlToUse) {
       Alert.alert(
-        'APIキー未設定',
-        '⚙️ 設定を開いて、Google Gemini APIキーを入力してください🐾（無料で取得できます）'
+        '中継URL未設定',
+        '⚙️ 設定を開いて、中継APIエンドポイントURLを設定してください🐾'
       );
       setShowSettings(true);
       return;
     }
 
-    const startTime = Date.now();
     setLoading(true);
     try {
       // プロンプトテンプレートの作成
       const genderDisplay = profile.gender === '男の子' ? '男の子' : '女の子';
-      const toneInstruction = profile.gender === '男の子' ? 'やんちゃで親しみやすい口調' : '優しく上品な話し方';
-      
-      const themeTitle = "きょうの何気ない幸せ";
-      const themeDesc = "何気ない日常の中に隠れている最高の一時";
       
       const modePrompt = storyMode === 'novel' 
         ? `【絵本小説風】\n- 語り手は客観的な視点から描写しつつ、${profile.name}ちゃんの心の声やセリフを「」書きで効果的に挿入してください。\n- ジャンル: ${genre}\n- 記号や見出しを使わず、美しい日本語の段落分けだけで執筆してください。`
         : `【おしゃべり風】\n- 最初から最後まで100% ${profile.name}ちゃん自身の一人称（${profile.pronoun}）だけで語り、${profile.owner_call}に胸の本音を語りかけてください。\n- 性格傾向「${profile.personality}」とエピソード「${profile.personality_detail}」を完璧に守ってください。`;
 
       const prompt = `
-        あなたはペット of 日常から家族への愛情を翻訳する「世界最高峰の動物文学作家」であり、「天才プロンプトエンジニア」です。
+        あなたはペット of 日常から家族への愛情を翻訳する「世界最高峰 of 動物文学作家」であり、「天才プロンプトエンジニア」です。
         提供された画像とペット情報をもとに、以下の3つのコンテンツを極めてエモーショナルに生成してください。
 
         【登録されているペットの情報】
@@ -147,37 +127,21 @@ export default function AlbumScreen() {
         }
       `;
 
-      // APIリクエスト
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKeyToUse}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [
-                  { text: prompt },
-                  {
-                    inlineData: {
-                      mimeType: 'image/jpeg',
-                      data: imageBase64,
-                    },
-                  },
-                ],
-              },
-            ],
-            generationConfig: {
-              responseMimeType: 'application/json',
-            },
-          }),
-        }
-      );
+      // VercelプロキシAPIリクエスト
+      const response = await fetch(urlToUse, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          imageBase64: imageBase64,
+        }),
+      });
 
       if (!response.ok) {
-        throw new Error('API request failed');
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || '中継サーバーとの通信に失敗しました🐾');
       }
 
       const resData = await response.json();
@@ -189,10 +153,9 @@ export default function AlbumScreen() {
       setMangaPrompt(parsedResult.manga_prompt);
 
       Alert.alert('生成完了', '愛犬・愛猫の心の声とストーリーが紡ぎ出されました🐾');
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-
-      Alert.alert('エラー', 'ストーリーのつむぎ出しに失敗しました。APIキーが正しいか、ネットワーク状況をご確認ください🐾');
+      Alert.alert('エラー', `ストーリーのつむぎ出しに失敗しました。\n\n詳細: ${e.message || '通信状況や設定した中継URLをご確認ください🐾'}`);
     } finally {
       setLoading(false);
     }
@@ -244,17 +207,16 @@ export default function AlbumScreen() {
 
         {showSettings && (
           <View style={styles.settingsPanel}>
-            <Text style={styles.label}>🔑 Google Gemini APIキー (必須)</Text>
+            <Text style={styles.label}>🌐 中継APIエンドポイントURL (必須)</Text>
             <TextInput
               style={styles.input}
-              value={geminiKey}
-              onChangeText={setMainApiKey}
-              secureTextEntry
-              placeholder="AI_zaSy..."
+              value={proxyUrl}
+              onChangeText={handleSaveProxyUrl}
+              placeholder="https://..."
               placeholderTextColor="#A0A0A0"
             />
             <Text style={styles.tipText}>
-              ※APIキーはデバイスの暗号化された領域に安全に保存されます。Gemini APIキーはGoogle AI Studio等で完全無料で即座に取得できます🔑
+              ※ Gemini APIキーを安全に保護するための中継サーバー（Vercelなど）のURLです。APIキー自体はサーバー側に隠蔽されます🐾
             </Text>
             
             <TouchableOpacity 
@@ -323,7 +285,16 @@ export default function AlbumScreen() {
 
           {loading ? (
             <View style={styles.loadingBox}>
-              <ActivityIndicator size="large" color="#C72C48" />
+              <Video
+                source={require('../assets/loading_animation.mp4')}
+                rate={1.0}
+                volume={0.0}
+                isMuted={true}
+                resizeMode={ResizeMode.CONTAIN}
+                shouldPlay
+                isLooping
+                style={styles.loadingVideo}
+              />
               <Text style={styles.loadingText}>心を込めて執筆中...🐾</Text>
               <Text style={styles.loadingSubText}>愛犬・愛猫の心の声を聞いています。10〜20秒ほどお待ちください。</Text>
             </View>
@@ -368,6 +339,10 @@ export default function AlbumScreen() {
                 
                 <TouchableOpacity style={styles.btnCopy} onPress={handleCopyPrompt}>
                   <Text style={styles.btnCopyText}>📋 プロンプトをコピーする</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.btnChatGpt} onPress={() => Linking.openURL('https://chatgpt.com/')}>
+                  <Text style={styles.btnChatGptText}>🚀 ChatGPTで4コマ漫画生成</Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -618,6 +593,18 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 13,
   },
+  btnChatGpt: {
+    backgroundColor: '#10a37f',
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  btnChatGptText: {
+    color: '#FFF',
+    fontWeight: 'bold',
+    fontSize: 13,
+  },
   btnShare: {
     backgroundColor: '#FFE9EC',
     borderWidth: 1,
@@ -631,5 +618,11 @@ const styles = StyleSheet.create({
     color: '#C72C48',
     fontWeight: 'bold',
     fontSize: 14,
+  },
+  loadingVideo: {
+    width: '100%',
+    height: 180,
+    borderRadius: 16,
+    marginBottom: 12,
   },
 });
