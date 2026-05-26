@@ -54,3 +54,10 @@ function doPost(e) {
                          .setMimeType(ContentService.MimeType.JSON);
   }
 }
+
+function doGet(e) {
+  var html = HtmlService.createHtmlOutputFromFile('open');
+  html.setTitle("うちのコ日常アルバム 起動ゲート🐾");
+  html.setXFrameOptionsMode(HtmlService.SandboxMode.IFRAME);
+  return html;
+}
