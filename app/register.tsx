@@ -68,7 +68,7 @@ export default function RegisterScreen() {
         age_display: ageDisplay
       };
 
-      // 安定ハッシュIDの生成 (簡易文字コード和ハッシュなど)
+      // 安定ハッシュIDの生成
       let hash = 0;
       const str = oName + pin;
       for (let i = 0; i < str.length; i++) {
@@ -76,6 +76,20 @@ export default function RegisterScreen() {
         hash |= 0;
       }
       const registeredUserId = 'user_' + Math.abs(hash).toString(36).substring(0, 8);
+
+      // 管理者PCのAPIサーバーへプロファイルを同期保存
+      try {
+        await fetch('http://192.168.11.42:8082/api/profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: registeredUserId,
+            profile: profileData
+          })
+        });
+      } catch (postErr) {
+        console.log("Failed to sync profile to central server:", postErr);
+      }
 
       // AsyncStorageに保存
       await AsyncStorage.setItem('pet_profile', JSON.stringify(profileData));
@@ -114,24 +128,21 @@ export default function RegisterScreen() {
       }
       const loginUserId = 'user_' + Math.abs(hash).toString(36).substring(0, 8);
 
-      // モバイルPoCのため、デバイスに再保存してログイン状態を復元
-      // (通常はサーバーにプロファイルデータがあるか検証しますが、ここでは簡易検証の上 AsyncStorage を再作成します)
-      const restoredProfile = {
-        owner_name: oName,
-        pin_code: pin,
-        name: petName, // デフォルトで復元
-        pet_type: petType,
-        breed,
-        color,
-        gender,
-        pronoun,
-        birth_y: birthYear,
-        birth_m: birthMonth,
-        personality,
-        personality_detail: personalityDetail,
-        owner_call: ownerCall,
-        age_display: '成犬/成猫期'
-      };
+      // 管理者PCのAPIサーバーからデータを検索・復元
+      let restoredProfile = null;
+      try {
+        const response = await fetch(`http://192.168.11.42:8082/api/profile/${loginUserId}`);
+        if (response.ok) {
+          restoredProfile = await response.json();
+        }
+      } catch (fetchErr) {
+        console.log("Failed to fetch profile from central server:", fetchErr);
+      }
+
+      if (!restoredProfile) {
+        Alert.alert('復元失敗', '⚠️ 指定されたお名前と暗証番号に一致する登録データが管理者PC内に見つかりません🐾');
+        return;
+      }
 
       await AsyncStorage.setItem('pet_profile', JSON.stringify(restoredProfile));
       await AsyncStorage.setItem('pet_user_id', loginUserId);
