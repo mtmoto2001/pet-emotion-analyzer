@@ -77,20 +77,6 @@ export default function RegisterScreen() {
       }
       const registeredUserId = 'user_' + Math.abs(hash).toString(36).substring(0, 8);
 
-      // 管理者PCのAPIサーバーへプロファイルを同期保存
-      try {
-        await fetch('http://192.168.11.42:8082/api/profile', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: registeredUserId,
-            profile: profileData
-          })
-        });
-      } catch (postErr) {
-        console.log("Failed to sync profile to central server:", postErr);
-      }
-
       // AsyncStorageに保存
       await AsyncStorage.setItem('pet_profile', JSON.stringify(profileData));
       await AsyncStorage.setItem('pet_user_id', registeredUserId);
@@ -128,28 +114,21 @@ export default function RegisterScreen() {
       }
       const loginUserId = 'user_' + Math.abs(hash).toString(36).substring(0, 8);
 
-      // 管理者PCのAPIサーバーからデータを検索・復元
-      let restoredProfile = null;
-      try {
-        const response = await fetch(`http://192.168.11.42:8082/api/profile/${loginUserId}`);
-        if (response.ok) {
-          restoredProfile = await response.json();
+      // ローカルのAsyncStorageに保存されたプロフィールと照合
+      const savedUserId = await AsyncStorage.getItem('pet_user_id');
+      const savedProfileRaw = await AsyncStorage.getItem('pet_profile');
+
+      if (savedUserId === loginUserId && savedProfileRaw) {
+        const savedProfile = JSON.parse(savedProfileRaw);
+        if (savedProfile.pin_code === pin) {
+          Alert.alert('復元完了', '以前のデータを復元しログインしました🐾', [
+            { text: 'OK', onPress: () => router.replace('/album') }
+          ]);
+          return;
         }
-      } catch (fetchErr) {
-        console.log("Failed to fetch profile from central server:", fetchErr);
       }
 
-      if (!restoredProfile) {
-        Alert.alert('復元失敗', '⚠️ 指定されたお名前と暗証番号に一致する登録データが管理者PC内に見つかりません🐾');
-        return;
-      }
-
-      await AsyncStorage.setItem('pet_profile', JSON.stringify(restoredProfile));
-      await AsyncStorage.setItem('pet_user_id', loginUserId);
-
-      Alert.alert('復元完了', '以前のデータを復元しログインしました🐾', [
-        { text: 'OK', onPress: () => router.replace('/album') }
-      ]);
+      Alert.alert('復元失敗', '⚠️ 指定されたお名前と暗証番号に一致する登録データが見つかりません🐾\n\n※ このデバイスで登録したデータのみ復元できます。');
     } catch (e) {
       console.error(e);
       Alert.alert('エラー', '復元処理中にエラーが発生しました🐾');

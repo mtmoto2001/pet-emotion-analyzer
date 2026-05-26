@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 
 export default function AlbumScreen() {
   const router = useRouter();
@@ -31,9 +32,16 @@ export default function AlbumScreen() {
           router.replace('/register');
         }
 
+        // まずユーザーが手入力したキーを確認
         const savedKey = await AsyncStorage.getItem('gemini_api_key');
         if (savedKey) {
           setMainApiKey(savedKey);
+        } else {
+          // app.json の extra に埋め込まれた管理者キーを自動適用
+          const embeddedKey = Constants.expoConfig?.extra?.googleApiKey;
+          if (embeddedKey) {
+            setGeminiKey(embeddedKey);
+          }
         }
       } catch (e) {
         console.error(e);
@@ -80,19 +88,11 @@ export default function AlbumScreen() {
 
     let apiKeyToUse = geminiKey.trim();
     if (!apiKeyToUse) {
-      // 起動時に取得し損ねていた場合、生成ボタンタップ時にもう一度だけ管理者PCから鍵の自動取得を試みます
-      try {
-        const response = await fetch('http://192.168.11.42:8082/api/key');
-        if (response.ok) {
-          const resJson = await response.json();
-          if (resJson.GOOGLE_API_KEY) {
-            apiKeyToUse = resJson.GOOGLE_API_KEY;
-            setGeminiKey(apiKeyToUse);
-            await AsyncStorage.setItem('gemini_api_key', apiKeyToUse);
-          }
-        }
-      } catch (e) {
-        console.log("Dynamic API key fetch fallback failed:", e);
+      // app.json の extra に埋め込まれた管理者キーをフォールバックで取得
+      const embeddedKey = Constants.expoConfig?.extra?.googleApiKey;
+      if (embeddedKey) {
+        apiKeyToUse = embeddedKey;
+        setGeminiKey(apiKeyToUse);
       }
     }
 
@@ -188,50 +188,9 @@ export default function AlbumScreen() {
       setStory(parsedResult.story);
       setMangaPrompt(parsedResult.manga_prompt);
 
-      // 管理者PCのAPIサーバーへ成功ログを送信
-      const petUserId = await AsyncStorage.getItem('pet_user_id') || 'unknown';
-      try {
-        await fetch('http://192.168.11.42:8082/api/log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: petUserId,
-            pet_name: profile.name,
-            pet_type: profile.pet_type,
-            story_mode: storyMode,
-            genre: storyMode === 'novel' ? genre : 'おしゃべり風',
-            duration_ms: Date.now() - startTime,
-            status: 'SUCCESS'
-          })
-        });
-      } catch (logErr) {
-        console.log("Failed to send central usage log:", logErr);
-      }
-
       Alert.alert('生成完了', '愛犬・愛猫の心の声とストーリーが紡ぎ出されました🐾');
     } catch (e) {
       console.error(e);
-
-      // 管理者PCのAPIサーバーへエラーログを送信
-      const petUserId = await AsyncStorage.getItem('pet_user_id') || 'unknown';
-      try {
-        await fetch('http://192.168.11.42:8082/api/log', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            user_id: petUserId,
-            pet_name: profile?.name || '不明',
-            pet_type: profile?.pet_type || '不明',
-            story_mode: storyMode,
-            genre: storyMode === 'novel' ? genre : 'おしゃべり風',
-            duration_ms: Date.now() - startTime,
-            status: 'ERROR',
-            error_msg: String(e)
-          })
-        });
-      } catch (logErr) {
-        console.log("Failed to send central error log:", logErr);
-      }
 
       Alert.alert('エラー', 'ストーリーのつむぎ出しに失敗しました。APIキーが正しいか、ネットワーク状況をご確認ください🐾');
     } finally {
