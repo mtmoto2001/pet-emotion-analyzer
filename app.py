@@ -1460,128 +1460,177 @@ LINE_CHANNEL_ACCESS_TOKEN = input_line if input_line else saved_config.get("LINE
 GOOGLE_API_KEY = input_google if input_google else saved_config.get("GOOGLE_API_KEY", "")
 
 def show_profile_dialog():
-    st.markdown("""
-    <div style="background: linear-gradient(135deg, #FFF0F2 0%, #FFF5F5 100%); padding: 1.5rem; border-radius: 20px; border: 1px solid rgba(255, 182, 193, 0.4); margin-bottom: 1.5rem; box-shadow: 0 8px 32px rgba(255, 128, 150, 0.08);">
-        <h2 style="color: #C72C48; margin: 0; font-weight: bold; font-size: 1.6rem; text-align: center;">🐾 👋 はじめてのペット登録</h2>
-        <p style="color: #7D6363; font-size: 0.9rem; margin-top: 0.4rem; margin-bottom: 0; text-align: center;">愛するうちのコの基本設定を行って、アルバムを開始しましょう🐾</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if "reg_page_mode" not in st.session_state:
+        st.session_state["reg_page_mode"] = "register"
 
-    st.write("うちのコの情報を登録して始めましょう。情報はサーバー上に安全に保存され、お名前と暗証番号でいつでもログイン・復元できます🔑")
-    
-    # ログイン連携情報
-    st.markdown("##### 👤 1. 飼い主さまとログイン設定 (必須)")
-    col_o1, col_o2 = st.columns(2)
-    with col_o1:
-        p_owner_name = st.text_input("飼い主のおなまえ (例: 佐藤美咲)", value="", key="p_owner_name")
-    with col_o2:
-        p_pin_code = st.text_input("4桁の暗証番号 (例: 1234)", value="", max_chars=4, type="password", key="p_pin_code")
+    if st.session_state["reg_page_mode"] == "login":
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #FFF0F2 0%, #FFF5F5 100%); padding: 1.5rem; border-radius: 20px; border: 1px solid rgba(255, 182, 193, 0.4); margin-bottom: 1.5rem; box-shadow: 0 8px 32px rgba(255, 128, 150, 0.08);">
+            <h2 style="color: #C72C48; margin: 0; font-weight: bold; font-size: 1.6rem; text-align: center;">🔑 データ復元 ログイン</h2>
+            <p style="color: #7D6363; font-size: 0.9rem; margin-top: 0.4rem; margin-bottom: 0; text-align: center;">登録した「飼い主のおなまえ」と「4桁の暗証番号」を入力してください🐾</p>
+        </div>
+        """, unsafe_allow_html=True)
         
-    st.write("---")
-    st.markdown("##### 🐶 2. うちのコの情報")
-    
-    p_name = st.text_input("名前", value="ベル", key="p_name")
-    p_type = st.selectbox("動物の種別", ["犬", "猫"], key="p_type")
-    p_breed = st.text_input("犬種・猫種", value="ミニチュアダックスフンド", key="p_breed")
-    p_color = st.text_input("毛色・視覚的特徴", value="レッド", key="p_color")
-    p_gender = st.radio("性別", ["男の子", "女の子"], horizontal=True, key="p_gender")
-    
-    # 性別に応じた一人称の提案リスト
-    if p_gender == "男の子":
-        pronoun_options = [
-            "ボク (甘えん坊・王道)", 
-            "オレ (やんちゃ・活発)", 
-            "ぼくちゃん (あざと可愛い・赤ちゃん)", 
-            "自分 (忠実・おっとり)", 
-            "拙者 (武士・忠義の侍)", 
-            "世 (王様・尊大)", 
-            f"{p_name} (名前呼び・無邪気)", 
-            "その他 (自由入力)"
-        ]
+        st.write("以前登録したお名前と暗証番号から、サーバーに保存されているデータを完全に復元してログインできます🔑")
+        
+        login_owner_name = st.text_input("飼い主のおなまえ", value="", key="restore_owner_name")
+        login_pin_code = st.text_input("4桁の暗証番号 (PIN)", value="", max_chars=4, type="password", key="restore_pin_code")
+        
+        if st.button("🔑 ログインしてデータを復元する", key="btn_restore_submit", use_container_width=True):
+            l_owner_clean = login_owner_name.strip()
+            l_pin_clean = login_pin_code.strip()
+            
+            if not l_owner_clean:
+                st.warning("⚠️ お名前を入力してください。")
+            elif not l_pin_clean or len(l_pin_clean) != 4 or not l_pin_clean.isdigit():
+                st.warning("⚠️ 暗証番号は4桁の数字を入力してください。")
+            else:
+                login_user_id = data_manager.generate_user_id(l_owner_clean, l_pin_clean)
+                loaded_profile = data_manager.load_profile(login_user_id)
+                
+                if loaded_profile and "name" in loaded_profile:
+                    st.session_state["save_profile_to_localstorage"] = loaded_profile
+                    st.query_params["user_id"] = login_user_id
+                    st.session_state["logged_in"] = True
+                    st.success(f"おかえりなさい！ {loaded_profile.get('name')}ちゃんのお部屋にログインしました🐾")
+                    st.rerun()
+                else:
+                    st.error("❌ 一致する登録データが見つかりませんでした。お名前や暗証番号が合っているか再度ご確認いただくか、お手数ですが新規登録をお願いいたします🐾")
+                    
+        st.write("---")
+        if st.button("👋 新規登録に戻る", key="btn_go_back_to_register", use_container_width=True):
+            st.session_state["reg_page_mode"] = "register"
+            st.rerun()
+            
     else:
-        pronoun_options = [
-            "わたし (お姉さん・上品)", 
-            "あたし (チャーミング・小悪魔)", 
-            "うち (カジュアル・気さく)", 
-            "あたい (おてんば・ツンデレ)", 
-            "ぼく (ボーイッシュ・僕っこ)", 
-            "あちき (花魁風・妖艶)", 
-            f"{p_name} (名前呼び・無邪気)", 
-            "その他 (自由入力)"
-        ]
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #FFF0F2 0%, #FFF5F5 100%); padding: 1.5rem; border-radius: 20px; border: 1px solid rgba(255, 182, 193, 0.4); margin-bottom: 1.5rem; box-shadow: 0 8px 32px rgba(255, 128, 150, 0.08);">
+            <h2 style="color: #C72C48; margin: 0; font-weight: bold; font-size: 1.6rem; text-align: center;">🐾 👋 はじめてのペット登録</h2>
+            <p style="color: #7D6363; font-size: 0.9rem; margin-top: 0.4rem; margin-bottom: 0; text-align: center;">愛するうちのコの基本設定を行って、アルバムを開始しましょう🐾</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.write("うちのコの情報を登録して始めましょう。情報はサーバー上に安全に保存され、お名前と暗証番号でいつでもログイン・復元できます🔑")
         
-    p_pronoun_sel = st.selectbox("うちのコの一人称（おしゃべり語尾）🐾", pronoun_options, key="p_pronoun_sel")
-    
-    if p_pronoun_sel == "その他 (自由入力)":
-        p_pronoun = st.text_input("自由に入力してください（例：俺様、ボクちん、ミーなど）", value="おれ様", key="p_pronoun_custom")
-    else:
-        p_pronoun = p_pronoun_sel.split(" ")[0]
+        # ログイン連携情報
+        st.markdown("##### 👤 1. 飼い主さまとログイン設定 (必須)")
+        col_o1, col_o2 = st.columns(2)
+        with col_o1:
+            p_owner_name = st.text_input("飼い主のおなまえ (例: 佐藤美咲)", value="", key="p_owner_name")
+        with col_o2:
+            p_pin_code = st.text_input("4桁の暗証番号 (例: 1234)", value="", max_chars=4, type="password", key="p_pin_code")
+            
+        st.write("---")
+        st.markdown("##### 🐶 2. うちのコの情報")
         
-    p_owner_call = st.text_input("飼い主さんの呼び方（パパ, ママなど）", value="パパ", key="p_owner_call")
-    
-    st.write("お誕生日（年齢の自動判定に使用します🐾）")
-    today = datetime.date(2026, 5, 24)
-    default_birth = datetime.date(2023, 1, 1)
-    min_birth = datetime.date(today.year - 25, 1, 1)
-    
-    p_birthday = st.date_input(
-        "お誕生日を選択",
-        value=default_birth,
-        min_value=min_birth,
-        max_value=today,
-        key="pet_birthday_input",
-        label_visibility="collapsed"
-    )
-    p_birth_y = p_birthday.year
-    p_birth_m = p_birthday.month
-    
-    personality_options = ["元気いっぱいでやんちゃ", "甘えん坊で寂しがり屋", "おっとりマイペース", "賢く、人間の言葉を理解しようとする", "臆病だけど優しい"]
-    p_pers = st.selectbox("基本の性格傾向", personality_options, key="p_pers")
-    p_pers_detail = st.text_area("具体的なエピソード・行動詳細", value="お気に入りのおもちゃをくわえて、得意げに部屋中を走り回っていたこと。", key="p_pers_detail")
-    
-    if st.button("💾 この内容で登録する", key="btn_register_submit"):
-        p_owner_clean = p_owner_name.strip()
-        p_pin_clean = p_pin_code.strip()
+        p_name = st.text_input("名前", value="ベル", key="p_name")
+        p_type = st.selectbox("動物の種別", ["犬", "猫"], key="p_type")
+        p_breed = st.text_input("犬種・猫種", value="ミニチュアダックスフンド", key="p_breed")
+        p_color = st.text_input("毛色・視覚的特徴", value="レッド", key="p_color")
+        p_gender = st.radio("性別", ["男の子", "女の子"], horizontal=True, key="p_gender")
         
-        if not p_owner_clean:
-            st.warning("⚠️ 飼い主のおなまえを入力してください。")
-        elif not p_pin_clean or len(p_pin_clean) != 4 or not p_pin_clean.isdigit():
-            st.warning("⚠️ 暗証番号は4桁の数字を入力してください。")
+        # 性別に応じた一人称の提案リスト
+        if p_gender == "男の子":
+            pronoun_options = [
+                "ボク (甘えん坊・王道)", 
+                "オレ (やんちゃ・活発)", 
+                "ぼくちゃん (あざと可愛い・赤ちゃん)", 
+                "自分 (忠実・おっとり)", 
+                "拙者 (武士・忠義の侍)", 
+                "世 (王様・尊大)", 
+                f"{p_name} (名前呼び・無邪気)", 
+                "その他 (自由入力)"
+            ]
         else:
-            # 年齢の自動計算
-            current_date = datetime.date(2026, 5, 24)
-            birth_date = datetime.date(p_birth_y, p_birth_m, 1)
-            total_months = (current_date.year - birth_date.year) * 12 + current_date.month - birth_date.month
-            if total_months < 0: age_display = "生後0ヶ月"
-            elif total_months < 12: age_display = f"子犬/子猫期（生後 {total_months} ヶ月）"
-            else: age_display = f"成犬/成猫期（ {total_months // 12} 歳 {total_months % 12} ヶ月）"
-     
-            profile_data = {
-                "owner_name": p_owner_clean,
-                "pin_code": p_pin_clean,
-                "name": p_name, 
-                "pet_type": p_type, 
-                "breed": p_breed, 
-                "color": p_color,
-                "gender": p_gender, 
-                "pronoun": p_pronoun, 
-                "birth_y": p_birth_y, 
-                "birth_m": p_birth_m,
-                "personality": p_pers, 
-                "personality_detail": p_pers_detail, 
-                "owner_call": p_owner_call,
-                "age_display": age_display
-            }
+            pronoun_options = [
+                "わたし (お姉さん・上品)", 
+                "あたし (チャーミング・小悪魔)", 
+                "うち (カジュアル・気さく)", 
+                "あたい (おてんば・ツンデレ)", 
+                "ぼく (ボーイッシュ・僕っこ)", 
+                "あちき (花魁風・妖艶)", 
+                f"{p_name} (名前呼び・無邪気)", 
+                "その他 (自由入力)"
+            ]
             
-            # 新しい安定IDを計算
-            registered_user_id = data_manager.generate_user_id(p_owner_clean, p_pin_clean)
+        p_pronoun_sel = st.selectbox("うちのコの一人称（おしゃべり語尾）🐾", pronoun_options, key="p_pronoun_sel")
+        
+        if p_pronoun_sel == "その他 (自由入力)":
+            p_pronoun = st.text_input("自由に入力してください（例：俺様、ボクちん、ミーなど）", value="おれ様", key="p_pronoun_custom")
+        else:
+            p_pronoun = p_pronoun_sel.split(" ")[0]
             
-            data_manager.save_profile(profile_data, registered_user_id)
-            st.session_state["save_profile_to_localstorage"] = profile_data
-            st.query_params["user_id"] = registered_user_id
-            st.session_state["show_tutorial_after_reg"] = True
-            st.session_state["logged_in"] = True
-            st.success("登録が完了しました！使い方ガイドを表示します。")
+        p_owner_call = st.text_input("飼い主さんの呼び方（パパ, ママなど）", value="パパ", key="p_owner_call")
+        
+        st.write("お誕生日（年齢の自動判定に使用します🐾）")
+        today = datetime.date(2026, 5, 24)
+        default_birth = datetime.date(2023, 1, 1)
+        min_birth = datetime.date(today.year - 25, 1, 1)
+        
+        p_birthday = st.date_input(
+            "お誕生日を選択",
+            value=default_birth,
+            min_value=min_birth,
+            max_value=today,
+            key="pet_birthday_input",
+            label_visibility="collapsed"
+        )
+        p_birth_y = p_birthday.year
+        p_birth_m = p_birthday.month
+        
+        personality_options = ["元気いっぱいでやんちゃ", "甘えん坊で寂しがり屋", "おっとりマイペース", "賢く、人間の言葉を理解しようとする", "臆病だけど優しい"]
+        p_pers = st.selectbox("基本の性格傾向", personality_options, key="p_pers")
+        p_pers_detail = st.text_area("具体的なエピソード・行動詳細", value="お気に入りのおもちゃをくわえて、得意げに部屋中を走り回っていたこと。", key="p_pers_detail")
+        
+        if st.button("💾 この内容で登録する", key="btn_register_submit"):
+            p_owner_clean = p_owner_name.strip()
+            p_pin_clean = p_pin_code.strip()
+            
+            if not p_owner_clean:
+                st.warning("⚠️ 飼い主のおなまえを入力してください。")
+            elif not p_pin_clean or len(p_pin_clean) != 4 or not p_pin_clean.isdigit():
+                st.warning("⚠️ 暗証番号は4桁の数字を入力してください。")
+            else:
+                # 年齢の自動計算
+                current_date = datetime.date(2026, 5, 24)
+                birth_date = datetime.date(p_birth_y, p_birth_m, 1)
+                total_months = (current_date.year - birth_date.year) * 12 + current_date.month - birth_date.month
+                if total_months < 0: age_display = "生後0ヶ月"
+                elif total_months < 12: age_display = f"子犬/子猫期（生後 {total_months} ヶ月）"
+                else: age_display = f"成犬/成猫期（ {total_months // 12} 歳 {total_months % 12} ヶ月）"
+         
+                profile_data = {
+                    "owner_name": p_owner_clean,
+                    "pin_code": p_pin_clean,
+                    "name": p_name, 
+                    "pet_type": p_type, 
+                    "breed": p_breed, 
+                    "color": p_color,
+                    "gender": p_gender, 
+                    "pronoun": p_pronoun, 
+                    "birth_y": p_birth_y, 
+                    "birth_m": p_birth_m,
+                    "personality": p_pers, 
+                    "personality_detail": p_pers_detail, 
+                    "owner_call": p_owner_call,
+                    "age_display": age_display
+                }
+                
+                # 新しい安定IDを計算
+                registered_user_id = data_manager.generate_user_id(p_owner_clean, p_pin_clean)
+                
+                data_manager.save_profile(profile_data, registered_user_id)
+                st.session_state["save_profile_to_localstorage"] = profile_data
+                st.query_params["user_id"] = registered_user_id
+                st.session_state["show_tutorial_after_reg"] = True
+                st.session_state["logged_in"] = True
+                st.success("登録が完了しました！使い方ガイドを表示します。")
+                st.rerun()
+
+        st.write("---")
+        st.write("💡 すでに以前ペットを登録したデータをお持ちですか？")
+        if st.button("🔑 登録済みデータから復元・ログインする", key="btn_switch_to_login", use_container_width=True):
+            st.session_state["reg_page_mode"] = "login"
             st.rerun()
 
 # データがなければ登録画面をインライン表示して処理を停止
