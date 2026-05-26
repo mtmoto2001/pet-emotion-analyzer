@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "うちのコ日常アルバム",
+    "slug": "pet-emotion-analyzer",
+    "version": "1.5.0",
+    "orientation": "portrait",
+    "icon": "./app_icon.png",
+    "userInterfaceStyle": "automatic",
+    "splash": {
+      "image": "./app_icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#FFF0F2"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mtmoto2001.petemotionanalyzer"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./app_icon.png",
+        "backgroundColor": "#FFF0F2"
+      },
+      "package": "com.mtmoto2001.petemotionanalyzer"
+    },
+    "web": {
+      "favicon": "./app_icon.png"
+    },
+    "scheme": "petalbum",
+    "plugins": [
+      "expo-router"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
