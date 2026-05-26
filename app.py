@@ -652,6 +652,27 @@ if is_admin:
     render_admin_dashboard()
     st.stop()
 
+if st.session_state.get("clear_localstorage"):
+    components.html("""
+    <script>
+    try {
+        localStorage.removeItem("pet_profile");
+        localStorage.removeItem("pet_user_id");
+        let parentUrl = "";
+        try {
+            parentUrl = window.top.location.href.split("?")[0];
+        } catch(e) {
+            parentUrl = document.referrer ? document.referrer.split("?")[0] : window.location.href.split("?")[0];
+        }
+        window.top.location.href = parentUrl;
+    } catch(e) {
+        console.error("Local storage clear failed:", e);
+    }
+    </script>
+    """, height=0, width=0)
+    st.session_state.clear()
+    st.stop()
+
 # --- ユーザーID（世帯ID）の自動生成とクエリパラメータ処理 ---
 if "user_id" not in st.query_params:
     new_id = str(uuid.uuid4())[:8]
@@ -1113,92 +1134,36 @@ if saved_profile and not is_admin and not st.session_state.get("logged_in"):
                 
     st.write("---")
     if st.button("🆕 別のペットを登録・ログインする", key="btn_switch_profile_mobile", use_container_width=True):
+        st.session_state["clear_localstorage"] = True
         st.query_params.clear()
-        st.session_state.clear()
         st.rerun()
         
     st.stop()
 
 # サーバー側にプロフィールが無い場合、LocalStorageから保存済みURLへ自動リダイレクト
+# サーバー側にプロフィールが無い場合、LocalStorageに保存データがあれば自動でそのユーザーIDへリダイレクトしてログイン画面へ
 if not saved_profile:
-    restore_html = f"""
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <meta charset="utf-8">
-        <style>
-            @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Noto+Sans+JP:wght@400;700&display=swap');
-            body {{ margin: 0; padding: 10px; font-family: 'Outfit', 'Noto Sans JP', sans-serif; background-color: transparent; display: flex; justify-content: center; align-items: center; min-height: 100vh; box-sizing: border-box; }}
-            .welcome-card {{ background: linear-gradient(135deg, #FFF0F2 0%, #FFF5F5 100%); border: 2px solid rgba(255, 182, 193, 0.5); border-radius: 24px; padding: 2.5rem 2rem; text-align: center; box-shadow: 0 12px 40px rgba(255, 128, 150, 0.12); max-width: 480px; width: 100%; box-sizing: border-box; animation: fadeIn 0.6s ease-out; }}
-            @keyframes fadeIn {{ from {{ opacity: 0; transform: translateY(15px); }} to {{ opacity: 1; transform: translateY(0); }} }}
-            .icon-badge {{ font-size: 3rem; margin-bottom: 1rem; display: inline-block; animation: bounce 2s infinite; }}
-            @keyframes bounce {{ 0%, 100% {{ transform: translateY(0); }} 50% {{ transform: translateY(-8px); }} }}
-            .title {{ color: #C72C48; font-weight: 700; font-size: 1.65rem; margin: 0 0 0.5rem 0; }}
-            .subtitle {{ color: #3D2D2D; font-weight: 600; font-size: 1.15rem; margin: 0 0 2.2rem 0; line-height: 1.4; }}
-            .btn-restore {{ display: inline-block; padding: 1rem 2.2rem; background: linear-gradient(135deg, #C72C48 0%, #FF6B8B 100%); color: #FFFFFF; font-size: 1.05rem; font-weight: bold; text-decoration: none; border-radius: 50px; box-shadow: 0 6px 20px rgba(199, 44, 72, 0.3); transition: all 0.3s ease; border: none; cursor: pointer; width: 100%; box-sizing: border-box; margin-bottom: 1.2rem; }}
-            .btn-restore:hover {{ transform: translateY(-2px); box-shadow: 0 10px 25px rgba(199, 44, 72, 0.45); }}
-            .link-register {{ color: #7D6363; font-size: 0.85rem; text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; transition: color 0.2s; }}
-            .link-register:hover {{ color: #C72C48; }}
-        </style>
-    </head>
-    <body>
-        <div id="welcome-gate" class="welcome-card" style="display: none;">
-            <div class="icon-badge">🐾</div>
-            <h2 class="title">おかえりなさい！</h2>
-            <h3 id="pet-welcome-name" class="subtitle">ペットちゃんのお部屋へようこそ</h3>
-            <a id="restore-link" href="#" target="_top" class="btn-restore">ログインへ 🚀</a>
-            <br>
-            <button id="btn-register-fresh" class="link-register">🆕 新しいペットを登録する</button>
-        </div>
-        <script>
-        try {{
-            const profile = localStorage.getItem("pet_profile");
-            const savedUserId = localStorage.getItem("pet_user_id");
-            if (profile && savedUserId) {{
-                const parsed = JSON.parse(profile);
-                if (parsed && parsed.name) {{
-                    const petNameText = document.getElementById("pet-welcome-name");
-                    if (parsed.owner_name) {{
-                        petNameText.innerText = parsed.owner_name + " 様 ＆ " + parsed.name + " ちゃんのお部屋🐾";
-                    }} else {{
-                        petNameText.innerText = parsed.name + " ちゃんのお部屋🐾";
-                    }}
-                    const link = document.getElementById("restore-link");
-                    let parentUrl = "";
-                    try {{
-                        parentUrl = window.top.location.href.split("?")[0];
-                    }} catch(e) {{
-                        parentUrl = document.referrer ? document.referrer.split("?")[0] : "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
-                    }}
-                    link.href = parentUrl + "?user_id=" + encodeURIComponent(savedUserId);
-                    
-                    document.getElementById("welcome-gate").style.display = "block";
-                    document.getElementById("btn-register-fresh").addEventListener("click", function() {{
-                        try {{
-                            localStorage.removeItem("pet_profile");
-                            localStorage.removeItem("pet_user_id");
-                            let resetUrl = "";
-                            try {{
-                                resetUrl = window.top.location.href.split("?")[0];
-                            }} catch(err) {{
-                                resetUrl = document.referrer ? document.referrer.split("?")[0] : "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
-                            }}
-                            window.top.location.href = resetUrl;
-                        }} catch(err) {{
-                            console.error(err);
-                            document.getElementById("welcome-gate").style.display = "none";
-                        }}
-                    }});
-                }}
-            }}
-        }} catch(e) {{
-            console.error("LocalStorage check failed:", e);
-        }}
-        </script>
-    </body>
-    </html>
+    auto_redirect_html = """
+    <script>
+    try {
+        const savedUserId = localStorage.getItem("pet_user_id");
+        if (savedUserId) {
+            let parentUrl = "";
+            try {
+                parentUrl = window.top.location.href.split("?")[0];
+            } catch(e) {
+                parentUrl = document.referrer ? document.referrer.split("?")[0] : window.location.href.split("?")[0];
+            }
+            if (!window.top.location.href.includes("user_id=" + savedUserId)) {
+                window.top.location.href = parentUrl + "?user_id=" + encodeURIComponent(savedUserId);
+            }
+        }
+    } catch(e) {
+        console.error("Auto-redirect check failed:", e);
+    }
+    </script>
     """
-    components.html(restore_html, height=450)
+    components.html(auto_redirect_html, height=0, width=0)
 
 # --- 登録完了後に自動でチュートリアルを表示する処理 ---
 if st.session_state.get("show_tutorial_after_reg"):
