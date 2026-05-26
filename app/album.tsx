@@ -78,7 +78,24 @@ export default function AlbumScreen() {
       return;
     }
 
-    const apiKeyToUse = geminiKey.trim();
+    let apiKeyToUse = geminiKey.trim();
+    if (!apiKeyToUse) {
+      // 起動時に取得し損ねていた場合、生成ボタンタップ時にもう一度だけ管理者PCから鍵の自動取得を試みます
+      try {
+        const response = await fetch('http://192.168.11.42:8082/api/key');
+        if (response.ok) {
+          const resJson = await response.json();
+          if (resJson.GOOGLE_API_KEY) {
+            apiKeyToUse = resJson.GOOGLE_API_KEY;
+            setGeminiKey(apiKeyToUse);
+            await AsyncStorage.setItem('gemini_api_key', apiKeyToUse);
+          }
+        }
+      } catch (e) {
+        console.log("Dynamic API key fetch fallback failed:", e);
+      }
+    }
+
     if (!apiKeyToUse) {
       Alert.alert(
         'APIキー未設定',
