@@ -1150,16 +1150,14 @@ if not saved_profile:
         if (savedUserId) {
             let parentUrl = "";
             try {
-                parentUrl = window.top.location.href.split("?")[0];
-            } catch(e) {
                 parentUrl = document.referrer ? document.referrer.split("?")[0] : window.location.href.split("?")[0];
+            } catch(e) {
+                parentUrl = "https://pet-emotion-analyzer-dr57r4gvnh66nvh3epzptd.streamlit.app/";
             }
-            if (!window.top.location.href.includes("user_id=" + savedUserId)) {
-                window.top.location.href = parentUrl + "?user_id=" + encodeURIComponent(savedUserId);
-            }
+            window.top.location.href = parentUrl + "?user_id=" + encodeURIComponent(savedUserId);
         }
     } catch(e) {
-        console.error("Auto-redirect check failed:", e);
+        console.error("Auto-redirect failed:", e);
     }
     </script>
     """
