@@ -1,6 +1,14 @@
 #!/bin/bash
 set -e
 
+echo "=== Listing files in /opt ==="
+ls -la /opt
+
+if [ -f /entrypoint.sh ]; then
+    echo "=== /entrypoint.sh content ==="
+    cat /entrypoint.sh
+fi
+
 # Ensure we are in the correct directory
 cd /opt/voicevox_engine
 
