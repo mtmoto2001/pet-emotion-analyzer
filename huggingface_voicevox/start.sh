@@ -7,9 +7,15 @@ cd /opt/voicevox_engine
 echo "=== Listing files in /opt/python/bin ==="
 ls -la /opt/python/bin || echo "No /opt/python/bin"
 
+echo "=== Python path and environment info ==="
+/opt/python/bin/python3 -c "import sys; print('sys.path:', sys.path)"
+/opt/python/bin/python3 -m pip list || echo "pip list failed"
+find /opt/python -name "uvicorn*" || echo "uvicorn not found in /opt/python"
+
 echo "=== Starting VOICEVOX Engine on port 50021 ==="
 # Start VOICEVOX engine in the background using the embedded Python environment
 /opt/python/bin/python3 run.py --host 127.0.0.1 --port 50021 --cpu_num_threads 2 &
+
 
 # Wait for VOICEVOX engine to become ready (max 120 seconds)
 echo "=== Waiting for VOICEVOX Engine to be ready ==="
