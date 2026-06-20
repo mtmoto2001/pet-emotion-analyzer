@@ -39,4 +39,5 @@ if [ $ELAPSED -ge $MAX_WAIT ]; then
 fi
 
 echo "=== Starting FastAPI Proxy on port 7860 ==="
-exec uvicorn app:app --host 0.0.0.0 --port 7860 --app-dir /opt
+exec /opt/python/bin/python3 -m uvicorn app:app --host 0.0.0.0 --port 7860 --app-dir /opt
+
