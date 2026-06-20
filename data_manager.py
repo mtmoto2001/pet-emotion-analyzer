@@ -7,7 +7,7 @@ PROFILE_FILE = "pet_profile.json"
 def load_json(filepath):
     if os.path.exists(filepath):
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, "r", encoding="utf-8", errors="replace") as f:
                 return json.load(f)
         except:
             return {}

@@ -3,6 +3,10 @@ FROM voicevox/voicevox_engine:cpu-ubuntu20.04-latest
 # Switch to root to install dependencies
 USER root
 
+# Set UTF-8 environment variables for Python
+ENV LANG=C.UTF-8
+ENV LC_ALL=C.UTF-8
+
 # Install pip and clean up apt cache to keep image small
 RUN apt-get update && apt-get install -y --no-install-recommends python3-pip && \
     rm -rf /var/lib/apt/lists/*
