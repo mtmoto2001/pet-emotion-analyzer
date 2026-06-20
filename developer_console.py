@@ -73,22 +73,44 @@ st.markdown("""
 # 設定データのロード
 config = data_manager.load_config()
 
-# ログファイルの読み込みとDataFrame化
+# 開発者コンソールのサイドバー設定（クラウドデータ同期トグル）
+st.sidebar.markdown("### ☁️ クラウド連携設定")
+data_source = st.sidebar.radio(
+    "データソース切り替え", 
+    ["📁 ローカルファイル表示", "☁️ クラウド（Google Sheets）同期"], 
+    index=1,
+    help="スマホ実機からGoogle Sheetsに送信された全世帯データと実行ログをリアルタイムで同期します。"
+)
+
+# デフォルトのGASプロキシURL
+default_proxy_url = "https://script.google.com/macros/s/AKfycby_yneEPDfmGGpGrZwCgEWt3KIQxZ_5V5LgX_8z9ItloS_Pg0p-SxsAqBW0OFdWa_WFog/exec"
+
+# ログファイルの設定
 log_file = data_manager.USAGE_LOG_FILE
 logs = []
-if os.path.exists(log_file):
-    try:
-        with open(log_file, "r", encoding="utf-8") as f:
-            for line in f:
-                if line.strip():
-                    logs.append(json.loads(line.strip()))
-    except Exception as e:
-        st.error(f"ログファイルの読み込みエラー: {e}")
+profiles = []
+
+if data_source == "☁️ クラウド（Google Sheets）同期":
+    api_key = config.get("GOOGLE_API_KEY", "")
+    with st.spinner("クラウド上の Google Sheets データベース同期中..."):
+        logs = data_manager.load_logs_cloud(default_proxy_url, api_key)
+        profiles = data_manager.load_all_profiles() # 念のためローカル側もフォールバック用に取得
+        cloud_profiles = data_manager.load_profiles_cloud(default_proxy_url, api_key)
+        if cloud_profiles:
+            profiles = cloud_profiles
+else:
+    # ローカルファイルの読み込み
+    if os.path.exists(log_file):
+        try:
+            with open(log_file, "r", encoding="utf-8") as f:
+                for line in f:
+                    if line.strip():
+                        logs.append(json.loads(line.strip()))
+        except Exception as e:
+            st.error(f"ログファイルの読み込みエラー: {e}")
+    profiles = data_manager.load_all_profiles()
 
 df_logs = pd.DataFrame(logs)
-
-# 世帯プロフィールのロード
-profiles = data_manager.load_all_profiles()
 df_profiles = pd.DataFrame(profiles)
 
 # --- 1. KPIダッシュボードエリア ---
@@ -320,14 +342,17 @@ with tab_raw_logs:
         # ログクリアボタン
         st.write("---")
         st.markdown("##### ⚠️ ログファイルのメンテナンス")
-        if st.button("🗑️ 実行ログをすべて消去する", key="btn_clear_logs_dev"):
-            try:
-                if os.path.exists(log_file):
-                    os.remove(log_file)
-                st.success("ログファイルを完全に消去しました。")
-                st.rerun()
-            except Exception as e:
-                st.error(f"ログ消去失敗: {e}")
+        if data_source == "☁️ クラウド（Google Sheets）同期":
+            st.info("☁️ クラウドモードではスプレッドシート上の生データを直接削除することはできません。Google Driveから『PetDailyAI_Database』を開いてログ行を直接削除してください。")
+        else:
+            if st.button("🗑️ 実行ログをすべて消去する", key="btn_clear_logs_dev"):
+                try:
+                    if os.path.exists(log_file):
+                        os.remove(log_file)
+                    st.success("ログファイルを完全に消去しました。")
+                    st.rerun()
+                except Exception as e:
+                    st.error(f"ログ消去失敗: {e}")
 
 st.write("---")
 st.caption("Pet Daily AI Developer Console - Strictly for Local Diagnostics & Development Support")

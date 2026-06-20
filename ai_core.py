@@ -6,7 +6,7 @@ import streamlit as st
 
 def run_ai_factory(google_key, pet_info, temp_file_path, story_mode, genre, progress_bar, status_text):
     """
-    Google Gemini API (gemini-2.5-flash) を使用して、画像から
+    Google Gemini API (gemini-flash-latest) を使用して、画像から
     ① 心情分析、② 指定されたジャンルの美しい日本語ショートストーリー、③ DALL-E 3(ChatGPT)向け超高精細4コマ漫画プロンプト
     を1パスで同時設計する engine
     """
@@ -37,7 +37,7 @@ def run_ai_factory(google_key, pet_info, temp_file_path, story_mode, genre, prog
         # ----------------------------------------------------------------
         # 【STEP 2】1パス一体型リクエストによる解析・執筆・最高のプロンプト設計
         # ----------------------------------------------------------------
-        status_text.info("📝 2/2: 最先端AI (Gemini 2.5 Flash) が画像からペットの姿と情景を読み解き、ストーリーを執筆中...")
+        status_text.info("📝 2/2: 最先端AI (Gemini Flash Latest) が画像からペット of 姿と情景を読み解き、ストーリーを執筆中...")
         progress_bar.progress(70)
 
         # --- ストーリーのマンネリ化を防ぐ心理テーマシャッフルシステム (10種のプレミアムプロット) ---
@@ -190,6 +190,7 @@ def run_ai_factory(google_key, pet_info, temp_file_path, story_mode, genre, prog
 
         1. ペットの気持ち分析 (feelings):
            - 提供された画像を極めて精密にディテール分析してください（ペットの視線の向き、耳の立ち方、口元の表情、リラックス度、体の体勢、背景の環境などから、その瞬間のミクロな感情を完璧に推測すること）。
+           - ※最重要※ 思い出ストーリー（story）で創作・脚色されるドラマチックな展開やフィクションの内容に引っ張られることなく、あくまで【送られた写真に写っている瞬間】の客観的な表情・姿勢とペット情報（性格）だけを冷静に分析し、その瞬間にペットがリアルに感じていた『本音の心の声（本当の深層心理）』のみを誠実に出力してください。
            - 分析した本当の気持ちや感情、{pet_info['owner_call']}へのまっすぐな愛着を、その子自身の本当の心の声として、温かく語りかけるように執筆してください（日本語、150〜200文字程度。圧倒的な文芸クオリティで）。
            - 今回選定された心理テーマ『{selected_theme_title}』のニュアンスも効果的にブレンドしてください。
 
@@ -197,13 +198,15 @@ def run_ai_factory(google_key, pet_info, temp_file_path, story_mode, genre, prog
            - {mode_prompt}
 
         3. GPT用4コマ漫画生成プロンプト (manga_prompt):
-           - 上記で作成したストーリーのセリフやシチュエーションを完全に反映させた、高品質な4コマ漫画（4-panel manga comic strip）をChatGPT/GPT（DALL-E 3）で一発で美しく生成するための英語の超詳細プロンプトを構築してください。
+           - ChatGPT（DALL-E 3）向けの超詳細な4コマ漫画（4-panel manga comic strip）生成プロンプトを英語で構築してください。
+           - ※最重要※ 4コマ漫画は、送られた写真の状況をそのまま4コマにするのではなく、上記で作成した【思い出ストーリー (story) の内容と流れ】を完全に重視し、そのストーリーに基づいた『起・承・転・結』のドラマチックな展開を4コマ（Panel 1〜4）で表現する構成にしてください。場面設定は写真の模写ではなく、ストーリーの展開に沿ってより豊かでドラマチックなビジュアル表現にしてください。
+           - 【超重要ルール】プロンプト記述自体はDALL-E 3の画像生成精度を高めるために英語で記述しますが、漫画内の吹き出し（speech bubbles / text labels）に描き込ませるセリフの内容は、必ず【日本語のテキスト】のまま指定してください。吹き出しのセリフを絶対に英語（"Hello"等）に翻訳せず、ペットの一人称や口調を反映した、愛らしい日本語（ひらがな・カタカナ・漢字）のままダブルクォーテーションで囲んで指定してください。
            - プロンプトの冒頭に、必ず【Visual Profile (Character Consistency Guide)】というセクションを設け、アップロードされた写真から分析したペットの精密な外見特徴（具体的なポーズ、表情、毛並み、特徴的なパーツ、身につけているアクセサリーや首輪、背景の色彩や環境など）を詳細な英語で記載してください。
            - プロンプト内には以下の要素を必ず含めてください：
              - 上記の【Visual Profile】に基づき、4つのコマすべてでキャラクターの一貫性を完全に維持するための指示。
              - 画風のスタイル指定（例: "A beautiful colored 4-panel manga layout", "warm and soft watercolor tones", "children picture book illustration style", "masterpiece"）
-             - 4つのコマ（Panel 1, Panel 2, Panel 3, Panel 4）ごとの具体的な構図、表情、アクション、背景の英語による緻密な描写
-             - 各コマに配置する日本語のセリフ（吹き出し用のセリフテキスト）を正確に描写指示すること（例: 'Include a speech bubble in Japanese saying "..."'）
+             - ストーリーの起承転結を反映した4つのコマ（Panel 1, Panel 2, Panel 3, Panel 4）ごとの具体的な構図、表情、アクション、背景 of 英語による緻密でドラマチックな描写
+             - 各コマに配置する日本語のセリフ（吹き出し用のセリフテキスト）を正確に描写指示すること。必ず日本語の文字で指示してください（例: 'Include a speech bubble in Japanese saying "こんにちは！"'）。
 
         【出力フォーマット】
         必ず以下のJSONスキーマに従って出力してください。キー名は完全に一致させてください。余計なマークダウン装飾（```jsonなど）は一切含めず、純粋なJSONテキストだけを返してください。
@@ -211,11 +214,11 @@ def run_ai_factory(google_key, pet_info, temp_file_path, story_mode, genre, prog
         {{
             "feelings": "ペットの気持ちの執筆テキスト（日本語、150〜200文字程度）",
             "story": "起承転結ストーリーの執筆テキスト（日本語、美しい文章のみ。見出しや【起承転結】記号は絶対に入れないこと）",
-            "manga_prompt": "ChatGPTにそのままコピー＆ペーストして使用できる、高品質な4コマ漫画生成用のプロ仕様英語プロンプト"
+            "manga_prompt": "ChatGPTにそのままコピー＆ペーストして使用できる、高品質な4コマ漫画生成用の吹き出しセリフが日本語で指定されたプロ仕様英語プロンプト"
         }}
         """
 
-        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={google_key}"
+        gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={google_key}"
         
         payload = {
             "contents": [
@@ -263,7 +266,7 @@ def run_lightweight_test(google_key):
     Gemini APIへの軽量な接続確認テスト
     """
     import requests
-    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key={google_key}"
+    gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key={google_key}"
     payload = {
         "contents": [
             {

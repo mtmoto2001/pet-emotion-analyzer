@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, ActivityIndicator } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -18,14 +18,11 @@ export default function WelcomeGate() {
         if (savedUserId && savedProfileRaw) {
           const parsed = JSON.parse(savedProfileRaw);
           setProfile(parsed);
-          setLoading(false);
-        } else {
-          // 初回ユーザーは新規登録画面へ直接リダイレクト
-          router.replace('/register');
         }
       } catch (e) {
         console.error('Failed to load profile from AsyncStorage:', e);
-        router.replace('/register');
+      } finally {
+        setLoading(false);
       }
     }
     checkLocalStorage();
@@ -38,6 +35,10 @@ export default function WelcomeGate() {
         <Text style={styles.loadingText}>読み込み中...🐾</Text>
       </View>
     );
+  }
+
+  if (!profile) {
+    return <Redirect href="/register" />;
   }
 
   return (

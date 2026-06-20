@@ -64,6 +64,7 @@
       cursor: pointer;
       border: none;
       width: 100%;
+      box-sizing: border-box;
       transition: background-color 0.2s, transform 0.1s;
     }
     .btn-launch:active {
@@ -114,49 +115,106 @@
     <h1>最新バージョン起動</h1>
     <p>思い出の写真から心の声を紡ぎ出し、特別なストーリーを創作するアプリが立ち上がります🐾</p>
     
-    <!-- 🚀 アプリ起動ボタン (ディープリンク自動スクリプト) -->
-    <button onclick="launchApp();" class="btn-launch">⚡ アプリを起動する (1タップ)</button>
+    <!-- 📢 LINE内ブラウザ警告ガイド（通常は非表示、LINE内ブラウザ検出時のみ表示） -->
+    <div id="line-warning" style="display: none; background-color: #FFF2CD; border: 1px solid #FFEBAA; border-radius: 16px; padding: 16px; margin-bottom: 24px; text-align: left;">
+      <span style="font-weight: bold; color: #856404; font-size: 14px; display: block; margin-bottom: 6px;">⚠️ LINEをお使いの方へ</span>
+      <span style="font-size: 12px; line-height: 1.5; color: #664d03; display: block;">
+        LINE内ではアプリが正常に起動しない場合があります。<br>
+        画面右上の<strong>「メニュー（縦の３点リーダー、または地球儀マーク）」</strong>から<strong>「デフォルトのブラウザで開く」</strong>または<strong>「Chrome/Safariで開く」</strong>を選択して起動してください🐾
+      </span>
+    </div>
+
+    <!-- 🚀 アプリ起動ボタン (デバイスごとにスクリプトで最適なURLを設定) -->
+    <a id="btn-app-launch" href="exp://u.expo.dev/a0dc2e31-3cda-4725-9bb6-ad5960d6a379?runtime-version=exposdk%3A54.0.0&channel-name=production" class="btn-launch">⚡ アプリを起動する (1タップ)</a>
+
+    <!-- 🤖 Android専用：手動コピペ起動ガイド（自動起動がブロックされた場合の絶対的フォールバック） -->
+    <div id="android-manual-card" style="display: none; border-top: 1px solid #FFE4E6; padding-top: 24px; margin-top: 24px; text-align: left;">
+      <div class="store-title" style="margin-bottom: 12px; color: #C72C48; font-size: 13px;">💡 アプリが起動しない場合（最終手段）</div>
+      <p style="font-size: 13px; line-height: 1.5; margin-bottom: 16px; color: #6D5C5C;">
+        Androidのブラウザやセキュリティ制限で自動起動がブロックされる場合があります。その場合は以下の手順で100%確実に起動できます🐾
+      </p>
+      
+      <!-- コピペ用ボックス -->
+      <div style="background-color: #FFF5F6; border: 1px dashed #FFCCD3; border-radius: 12px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 16px;">
+        <span id="copy-target" style="font-family: monospace; font-size: 11px; color: #A83A4A; word-break: break-all; user-select: all;">exp://u.expo.dev/a0dc2e31-3cda-4725-9bb6-ad5960d6a379?runtime-version=exposdk:54.0.0&channel-name=production</span>
+        <button id="btn-copy" style="background-color: #C72C48; color: white; border: none; border-radius: 8px; padding: 8px 12px; font-size: 12px; font-weight: bold; cursor: pointer; white-space: nowrap; flex-shrink: 0; box-shadow: 0 2px 6px rgba(199, 44, 72, 0.2); transition: background-color 0.2s;">コピー</button>
+      </div>
+
+      <div style="font-size: 12px; line-height: 1.6; color: #5D4D4D;">
+        <strong>🐾 起動手順（3ステップ）</strong><br>
+        1. 右の「コピー」ボタンを押してURLをコピーします。<br>
+        2. <a href="https://play.google.com/store/apps/details?id=host.exp.exponent" target="_blank" style="color: #C72C48; font-weight: bold; text-decoration: underline;">ここを押してExpo Goを起動</a>します。<br>
+        3. アプリの<strong>「Enter URL manually」</strong>欄に貼り付け、<strong>「Connect」</strong>を押すと起動します！🙆
+      </div>
+    </div>
     
     <div class="store-container">
       <div class="store-title">⚠️ アプリが起動しない・未インストールの方</div>
       <div class="store-buttons">
-        <a href="https://apps.apple.com/app/expo-go/id984023788" class="store-btn" target="_blank">🍎 iPhone用 (App Store)</a>
+        <a href="https://apps.apple.com/jp/app/expo-go/id982107779" class="store-btn" target="_blank">🍎 iPhone用 (App Store)</a>
         <a href="https://play.google.com/store/apps/details?id=host.exp.exponent" class="store-btn" target="_blank">🤖 Android用 (Google Play)</a>
       </div>
     </div>
   </div>
 
   <script>
-    function launchApp() {
-      var scheme = "exp://nw0ig38-anonymous-8081.exp.direct";
-      
-      // 1. 直接カスタムスキームをトリガー
-      window.location.href = scheme;
-      
-      // 2. 一部ブラウザ向けのバックアップトリガー (iframe)
-      try {
-        var iframe = document.createElement("iframe");
-        iframe.style.border = "none";
-        iframe.style.width = "1px";
-        iframe.style.height = "1px";
-        iframe.src = scheme;
-        document.body.appendChild(iframe);
-      } catch (e) {
-        console.error(e);
-      }
-      
-      // 3. 反応がない場合のストア自動フォールバック (3秒後)
+    // LINE内ブラウザの検出とガイド表示
+    var ua = navigator.userAgent || navigator.vendor || window.opera;
+    var isLine = ua.indexOf("LINE") > -1;
+    if (isLine) {
+      document.getElementById("line-warning").style.display = "block";
+    }
+
+    var isAndroid = /Android/i.test(navigator.userAgent);
+    
+    // デバイスに応じて最適なディープリンクを設定
+    var launchUrl = "";
+    if (isAndroid) {
+      // Android用：コロンをエンコードした intent:// を呼び出し、Chromeのコロン破損バグとExpo Goのデコード漏れの両方を解決
+      launchUrl = "intent://u.expo.dev/a0dc2e31-3cda-4725-9bb6-ad5960d6a379?runtime-version=exposdk%3A54.0.0&channel-name=production#Intent;scheme=exp;package=host.exp.exponent;end;";
+    } else {
+      // iOS / その他用：標準の exp:// スキームを使用（コロンエンコード）
+      launchUrl = "exp://u.expo.dev/a0dc2e31-3cda-4725-9bb6-ad5960d6a379?runtime-version=exposdk%3A54.0.0&channel-name=production";
+    }
+    document.getElementById("btn-app-launch").href = launchUrl;
+
+    // Android専用手動カードの表示制御
+    if (isAndroid) {
+      document.getElementById("android-manual-card").style.display = "block";
+    }
+
+    // 起動ボタンクリック時のストアフォールバック処理
+    document.getElementById("btn-app-launch").addEventListener("click", function(event) {
+      // アプリがインストールされていない等の理由で、3秒経過してもブラウザがアクティブな場合のフォールバック
       setTimeout(function() {
         if (!document.hidden) {
-          var isAndroid = /Android/i.test(navigator.userAgent);
           if (isAndroid) {
             window.location.href = "https://play.google.com/store/apps/details?id=host.exp.exponent";
           } else {
-            window.location.href = "https://apps.apple.com/app/expo-go/id984023788";
+            window.location.href = "https://apps.apple.com/jp/app/expo-go/id982107779";
           }
         }
       }, 3000);
-    }
+    });
+
+    // コピー処理の実装
+    document.getElementById("btn-copy").addEventListener("click", function() {
+      var copyText = document.getElementById("copy-target").innerText;
+      
+      navigator.clipboard.writeText(copyText).then(function() {
+        var btn = document.getElementById("btn-copy");
+        btn.innerText = "コピー完了！";
+        btn.style.backgroundColor = "#28A745"; // グリーン
+        
+        setTimeout(function() {
+          btn.innerText = "コピー";
+          btn.style.backgroundColor = "#C72C48";
+        }, 2000);
+      }).catch(function(err) {
+        // フォールバックアラート
+        alert("コピーボタンが動作しないため、URLエリアを直接長押ししてコピーしてください🐾");
+      });
+    });
   </script>
 </body>
 </html>

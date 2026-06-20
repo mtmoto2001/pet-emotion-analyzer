@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, View, TextInput, TouchableOpacity, ScrollView, Alert, Image, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import * as ImagePicker from 'expo-image-picker';
 
 export default function RegisterScreen() {
   const router = useRouter();
@@ -22,10 +23,38 @@ export default function RegisterScreen() {
   const [personality, setPersonality] = useState('元気いっぱいでやんちゃ');
   const [personalityDetail, setPersonalityDetail] = useState('お気に入りのおもちゃをくわえて、得意げに部屋中を走り回っていたこと。');
   const [ownerCall, setOwnerCall] = useState('パパ');
+  const [registerLoading, setRegisterLoading] = useState(false);
+  
+  // 渾身の1枚 (アバター) 用State
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarBase64, setAvatarBase64] = useState<string | null>(null);
+
+  // 画像選択メソッド
+  const pickAvatar = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('写真のアクセス許可', 'プロフィール写真を選択するために写真のアクセス許可が必要です🐾');
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.7,
+      base64: true,
+    });
+    if (!result.canceled && result.assets && result.assets[0]) {
+      setAvatarUri(result.assets[0].uri);
+      if (result.assets[0].base64) {
+        setAvatarBase64(result.assets[0].base64);
+      }
+    }
+  };
 
   // データ復元用State
   const [restoreName, setRestoreName] = useState('');
   const [restorePin, setRestorePin] = useState('');
+  const [restoreLoading, setRestoreLoading] = useState(false);
 
   // 新規登録処理
   const handleRegister = async () => {
@@ -42,6 +71,87 @@ export default function RegisterScreen() {
     }
 
     try {
+      setRegisterLoading(true);
+
+      // VOICEVOX用声設定の自動選定（Gemini API呼び出し）
+      let voiceSettings = {
+        speaker_id: gender === '女の子' ? 2 : 12,
+        speaker_name: gender === '女の子' ? '四国めたん' : '白上虎太郎',
+        speedScale: 1.0,
+        pitchScale: 0.0,
+        intonationScale: 1.0
+      };
+
+      try {
+        const proxyUrl = 'https://script.google.com/macros/s/AKfycby_yneEPDfmGGpGrZwCgEWt3KIQxZ_5V5LgX_8z9ItloS_Pg0p-SxsAqBW0OFdWa_WFog/exec';
+        const aiPrompt = `
+          あなたはペットの個性を分析し、最適なVOICEVOXの音声キャラクターと設定値（パラメータ）を決定する専門AIです。
+          以下の【ペット情報】を分析し、最もマッチするVOICEVOXのスピーカーID（speaker_id）、スピーカー名（speaker_name）、話速（speedScale: 0.8〜1.5）、音高（pitchScale: -0.1〜0.1）、抑揚（intonationScale: 0.8〜1.5）を選定してください。
+
+          【ペット情報】
+          ・名前: ${petName}
+          ・性別: ${gender}
+          ・種別: ${petType}（品種: ${breed}）
+          ・特徴・毛色: ${color}
+          ・性格: ${personality}
+          ・具体的なエピソード: ${personalityDetail}
+
+          【VOICEVOX 話者リスト】
+          ・女の子向け（性別が女の子の場合に優先、ただしキャラクターの性格によって男の子でずんだもん等を選ぶのも可）:
+            - 四国めたん (speaker_id: 2, 特徴: おすまし・ツンデレ・知的なお姉さん)
+            - ずんだもん (speaker_id: 3, 特徴: 元気・活発・ユーモラスな中性ボイス)
+            - 春日部つむぎ (speaker_id: 8, 特徴: 元気なギャル・明るい少女)
+            - 雨晴はう (speaker_id: 10, 特徴: 優しくおっとりした看護師・癒やし系)
+            - 波音リツ (speaker_id: 9, 特徴: クール・大人っぽいお姉さん)
+          ・男の子向け（性別が男の子の場合に優先）:
+            - 白上虎太郎 (speaker_id: 12, 特徴: 可愛い少年・甘えん坊)
+            - 玄野武宏 (speaker_id: 11, 特徴: 爽やかで知的な青年)
+            - 青山龍星 (speaker_id: 13, 特徴: 低音・ダンディで落ち着いた大人の男性)
+            - 栗田まろん (speaker_id: 49, 特徴: 中性的で可愛らしい男の子)
+
+          必ず以下のJSONスキーマに従ってJSONテキストのみを出力してください。他の文章や装飾は絶対に出力しないでください。
+          {
+            "speaker_id": 数値,
+            "speaker_name": "スピーカー名",
+            "speedScale": 数値（0.8〜1.5の範囲）,
+            "pitchScale": 数値（-0.1〜0.1の範囲）,
+            "intonationScale": 数値（0.8〜1.5の範囲）
+          }
+        `;
+
+        const aiResponse = await fetch(proxyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'generate_text',
+            prompt: aiPrompt
+          }),
+        });
+
+        if (aiResponse.ok) {
+          const resData = await aiResponse.json();
+          const textResult = resData.candidates?.[0]?.content?.parts?.[0]?.text || 
+                             resData.candidates?.[0]?.part?.text || '';
+          const jsonMatch = textResult.trim().match(/\{[\s\S]*\}/);
+          if (jsonMatch) {
+            const parsed = JSON.parse(jsonMatch[0]);
+            if (parsed.speaker_id && parsed.speaker_name) {
+              voiceSettings = {
+                speaker_id: Number(parsed.speaker_id),
+                speaker_name: parsed.speaker_name,
+                speedScale: Number(parsed.speedScale) || 1.0,
+                pitchScale: Number(parsed.pitchScale) || 0.0,
+                intonationScale: Number(parsed.intonationScale) || 1.0
+              };
+            }
+          }
+        }
+      } catch (voiceErr) {
+        console.warn('声の自動設定生成に失敗しました。デフォルトを使用します。', voiceErr);
+      }
+
       // 年齢の自動計算
       const currentYear = 2026;
       const currentMonth = 5;
@@ -65,7 +175,9 @@ export default function RegisterScreen() {
         personality,
         personality_detail: personalityDetail,
         owner_call: ownerCall,
-        age_display: ageDisplay
+        age_display: ageDisplay,
+        avatarBase64: avatarBase64, // 渾身の1枚をプロフィールDBに保存！
+        voice_settings: voiceSettings // 音声設定の保存
       };
 
       // 安定ハッシュIDの生成
@@ -81,12 +193,32 @@ export default function RegisterScreen() {
       await AsyncStorage.setItem('pet_profile', JSON.stringify(profileData));
       await AsyncStorage.setItem('pet_user_id', registeredUserId);
 
+      // ★ スプレッドシートDBへのプロフィール自動同期 ★
+      try {
+        const proxyUrl = 'https://script.google.com/macros/s/AKfycby_yneEPDfmGGpGrZwCgEWt3KIQxZ_5V5LgX_8z9ItloS_Pg0p-SxsAqBW0OFdWa_WFog/exec';
+        fetch(proxyUrl, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'save_profile',
+            user_id: registeredUserId,
+            profile: profileData
+          }),
+        }).catch(() => {});
+      } catch (err) {
+        console.warn('DB同期連携スキップ:', err);
+      }
+
       Alert.alert('登録完了', 'ペットの登録が完了しました🐾', [
         { text: 'OK', onPress: () => router.replace('/album') }
       ]);
     } catch (e) {
       console.error(e);
       Alert.alert('エラー', '登録処理中にエラーが発生しました🐾');
+    } finally {
+      setRegisterLoading(false);
     }
   };
 
@@ -114,7 +246,7 @@ export default function RegisterScreen() {
       }
       const loginUserId = 'user_' + Math.abs(hash).toString(36).substring(0, 8);
 
-      // ローカルのAsyncStorageに保存されたプロフィールと照合
+      // 1. ローカルのAsyncStorageに保存されたプロフィールと照合
       const savedUserId = await AsyncStorage.getItem('pet_user_id');
       const savedProfileRaw = await AsyncStorage.getItem('pet_profile');
 
@@ -128,9 +260,64 @@ export default function RegisterScreen() {
         }
       }
 
-      Alert.alert('復元失敗', '⚠️ 指定されたお名前と暗証番号に一致する登録データが見つかりません🐾\n\n※ このデバイスで登録したデータのみ復元できます。');
+      // 2. クラウド（GAS + Google Sheets）からプロフィールデータを復元するフォールバック
+      setRestoreLoading(true);
+      try {
+        const proxyUrl = 'https://script.google.com/macros/s/AKfycby_yneEPDfmGGpGrZwCgEWt3KIQxZ_5V5LgX_8z9ItloS_Pg0p-SxsAqBW0OFdWa_WFog/exec';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000);
+        let profileObj: any = null;
+        try {
+          const response = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action: 'get_profile',
+              user_id: loginUserId
+            }),
+            signal: controller.signal,
+          });
+          clearTimeout(timeoutId);
+          
+          if (response.ok) {
+            const text = await response.text();
+            try {
+              profileObj = JSON.parse(text);
+            } catch (parseErr) {
+              console.warn('プロフィールJSONのパースに失敗:', parseErr, 'text:', text.slice(0, 200));
+            }
+          }
+        } catch (fetchErr: any) {
+          clearTimeout(timeoutId);
+          if (fetchErr.name === 'AbortError') {
+            console.warn('クラウドへの接続がタイムアウトしました');
+          } else {
+            console.warn('クラウドフェッチエラー:', fetchErr);
+          }
+        }
+
+        if (profileObj && !profileObj.error && profileObj.pin_code === pin) {
+          // AsyncStorageにロードして保存
+          await AsyncStorage.setItem('pet_profile', JSON.stringify(profileObj));
+          await AsyncStorage.setItem('pet_user_id', loginUserId);
+          setRestoreLoading(false);
+          Alert.alert('復元完了', 'クラウドから以前のデータを復元しログインしました🐾', [
+            { text: 'OK', onPress: () => router.replace('/album') }
+          ]);
+          return;
+        }
+      } catch (cloudErr) {
+        console.warn('クラウドからのデータ復元に失敗しました:', cloudErr);
+      } finally {
+        setRestoreLoading(false);
+      }
+
+      Alert.alert('復元失敗', '⚠️ 指定されたお名前と暗証番号に一致する登録データが見つかりません🐾\n\n※ クラウドおよびデバイスにデータが存在することを確認してください。');
     } catch (e) {
       console.error(e);
+      setRestoreLoading(false);
       Alert.alert('エラー', '復元処理中にエラーが発生しました🐾');
     }
   };
@@ -171,8 +358,12 @@ export default function RegisterScreen() {
               />
             </View>
 
-            <TouchableOpacity style={styles.btnPrimary} onPress={handleRestore}>
-              <Text style={styles.btnPrimaryText}>🔑 ログインしてデータを復元する</Text>
+            <TouchableOpacity style={[styles.btnPrimary, restoreLoading && { opacity: 0.6 }]} onPress={restoreLoading ? undefined : handleRestore}>
+              {restoreLoading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.btnPrimaryText}>🔑 ログインしてデータを復元する</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.divider} />
@@ -297,19 +488,27 @@ export default function RegisterScreen() {
               <TextInput style={styles.input} value={personality} onChangeText={setPersonality} />
             </View>
 
+            <Text style={styles.sectionHeader}>📸 3. ペットの渾身の1枚 (プロフィール写真)</Text>
             <View style={styles.inputGroup}>
-              <Text style={styles.label}>具体的なエピソード</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={personalityDetail}
-                onChangeText={setPersonalityDetail}
-                multiline
-                numberOfLines={3}
-              />
+              <Text style={styles.label}>アルバムや新聞に常に飾られる、最高のお写真です🐾</Text>
+              <TouchableOpacity style={styles.avatarPickerBtn} onPress={pickAvatar}>
+                {avatarUri ? (
+                  <Image source={{ uri: avatarUri }} style={styles.avatarPreviewImage} />
+                ) : (
+                  <View style={styles.avatarPickPlaceholder}>
+                    <Text style={styles.avatarPickPlaceholderIcon}>🐶</Text>
+                    <Text style={styles.avatarPickPlaceholderText}>渾身の1枚を選択（タップ）🐾</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.btnPrimary} onPress={handleRegister}>
-              <Text style={styles.btnPrimaryText}>💾 この内容で登録する</Text>
+            <TouchableOpacity style={[styles.btnPrimary, registerLoading && { opacity: 0.6 }]} onPress={registerLoading ? undefined : handleRegister}>
+              {registerLoading ? (
+                <ActivityIndicator color="#FFF" />
+              ) : (
+                <Text style={styles.btnPrimaryText}>💾 この内容で登録する</Text>
+              )}
             </TouchableOpacity>
 
             <View style={styles.divider} />
@@ -461,5 +660,36 @@ const styles = StyleSheet.create({
     fontSize: 13,
     textAlign: 'center',
     marginBottom: 8,
+  },
+  avatarPickerBtn: {
+    width: '100%',
+    height: 180,
+    borderRadius: 16,
+    borderWidth: 2,
+    borderColor: '#FFD0D6',
+    borderStyle: 'dashed',
+    overflow: 'hidden',
+    marginBottom: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#FFFDFD',
+  },
+  avatarPreviewImage: {
+    width: '100%',
+    height: '100%',
+    resizeMode: 'cover',
+  },
+  avatarPickPlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  avatarPickPlaceholderIcon: {
+    fontSize: 40,
+    marginBottom: 6,
+  },
+  avatarPickPlaceholderText: {
+    color: '#7D6363',
+    fontWeight: '600',
+    fontSize: 13,
   },
 });

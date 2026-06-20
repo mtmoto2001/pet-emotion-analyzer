@@ -9,7 +9,7 @@ export default function RootLayout() {
       <Stack
         screenOptions={{
           headerStyle: {
-            backgroundColor: '#FFF0F2',
+            backgroundColor: '#FFE4E8',
           },
           headerTintColor: '#C72C48',
           headerTitleStyle: {
@@ -46,6 +46,13 @@ export default function RootLayout() {
           options={{ 
             title: "🐾 うちのコ日常アルバム",
             headerBackVisible: false
+          }} 
+        />
+        <Stack.Screen 
+          name="voice_settings" 
+          options={{ 
+            title: "🔊 声の設定変更",
+            headerBackVisible: true 
           }} 
         />
       </Stack>

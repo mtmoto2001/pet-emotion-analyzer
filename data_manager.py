@@ -43,6 +43,23 @@ def load_config(user_id=None):
 def save_config(l_token, google_key, user_id=None): 
     # 常にシステム共通の config.json に保存
     save_json(CONFIG_FILE, {"LINE_CHANNEL_ACCESS_TOKEN": l_token, "GOOGLE_API_KEY": google_key})
+    
+    # クラウドのスプレッドシートDB側のSettingsシートにも同期して即座に反映させる
+    try:
+        proxy_url = "https://script.google.com/macros/s/AKfycby_yneEPDfmGGpGrZwCgEWt3KIQxZ_5V5LgX_8z9ItloS_Pg0p-SxsAqBW0OFdWa_WFog/exec"
+        requests.post(
+            proxy_url,
+            json={
+                "action": "save_settings",
+                "settings": {
+                    "GOOGLE_API_KEY": google_key,
+                    "LINE_CHANNEL_ACCESS_TOKEN": l_token
+                }
+            },
+            timeout=5
+        )
+    except Exception as e:
+        print(f"Failed to sync settings to cloud database: {e}")
 
 def load_profile(user_id=None): 
     return load_json(get_profile_filepath(user_id))
@@ -135,3 +152,51 @@ def generate_user_id(owner_name, pin_code):
     pin_clean = str(pin_code).strip()
     raw_str = f"{name_clean}_{pin_clean}"
     return hashlib.md5(raw_str.encode('utf-8')).hexdigest()[:12]
+
+# --- クラウドスプレッドシートDB接続用の同期関数 ---
+import requests
+
+def load_profiles_cloud(proxy_url, api_key):
+    try:
+        response = requests.post(
+            proxy_url,
+            json={
+                "action": "get_profiles",
+                "apiKey": api_key
+            },
+            timeout=8
+        )
+        if response.status_code == 200:
+            res_data = response.json()
+            if isinstance(res_data, list):
+                return res_data
+            else:
+                print(f"Cloud profiles format invalid: {res_data}")
+        else:
+            print(f"Cloud profiles request failed: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Failed to fetch profiles from cloud: {e}")
+    return []
+
+def load_logs_cloud(proxy_url, api_key):
+    try:
+        response = requests.post(
+            proxy_url,
+            json={
+                "action": "get_logs",
+                "apiKey": api_key
+            },
+            timeout=8
+        )
+        if response.status_code == 200:
+            res_data = response.json()
+            if isinstance(res_data, list):
+                return res_data
+            else:
+                print(f"Cloud logs format invalid: {res_data}")
+        else:
+            print(f"Cloud logs request failed: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Failed to fetch logs from cloud: {e}")
+    return []
+

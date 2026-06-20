@@ -2,7 +2,7 @@
   "expo": {
     "name": "うちのコ日常アルバム",
     "slug": "pet-emotion-analyzer",
-    "version": "1.5.0",
+    "version": "1.6.1",
     "orientation": "portrait",
     "icon": "./app_icon.png",
     "userInterfaceStyle": "automatic",
@@ -26,6 +26,7 @@
       "favicon": "./app_icon.png"
     },
     "scheme": "petalbum",
+    "newArchEnabled": false,
     "plugins": [
       "expo-router"
     ],
@@ -33,7 +34,17 @@
       "typedRoutes": true
     },
     "extra": {
-      "googleApiKey": "AIzaSyBhD-gFDBY4qg1cv7QE2HmZalBirWRRGNg"
+      "router": {},
+      "eas": {
+        "projectId": "a0dc2e31-3cda-4725-9bb6-ad5960d6a379"
+      }
+    },
+    "owner": "pet-album-mt",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a0dc2e31-3cda-4725-9bb6-ad5960d6a379"
     }
   }
 }
