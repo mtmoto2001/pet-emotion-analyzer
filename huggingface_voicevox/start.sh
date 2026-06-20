@@ -4,6 +4,12 @@ set -e
 # Ensure we are in the correct directory
 cd /opt/voicevox_engine
 
+# Explicitly set PYTHONPATH to include the default user's local site-packages
+export PYTHONPATH="/home/user/.local/lib/python3.11/site-packages:$PYTHONPATH"
+
+echo "=== Search for semver location ==="
+find / -name "semver" -type d 2>/dev/null || echo "semver directory not found"
+
 echo "=== Listing files in /opt/python/bin ==="
 ls -la /opt/python/bin || echo "No /opt/python/bin"
 
@@ -15,6 +21,7 @@ find /opt/python -name "uvicorn*" || echo "uvicorn not found in /opt/python"
 echo "=== Starting VOICEVOX Engine on port 50021 ==="
 # Start VOICEVOX engine in the background using the embedded Python environment
 /opt/python/bin/python3 run.py --host 127.0.0.1 --port 50021 --cpu_num_threads 2 &
+
 
 
 # Wait for VOICEVOX engine to become ready (max 120 seconds)

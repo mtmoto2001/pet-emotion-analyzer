@@ -26,6 +26,10 @@ RUN mkdir -p /tmp/voicevox_cache && \
 # Set the working directory to VOICEVOX engine location
 WORKDIR /opt/voicevox_engine
 
+# Switch back to non-root user for Hugging Face Spaces (UID 1000)
+USER 1000
+
 EXPOSE 7860
 
 CMD ["/bin/bash", "/opt/start.sh"]
+
