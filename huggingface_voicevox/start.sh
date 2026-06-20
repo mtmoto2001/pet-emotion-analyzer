@@ -4,6 +4,9 @@ set -e
 # Ensure we are in the correct directory
 cd /opt/voicevox_engine
 
+echo "=== Listing files in /opt/voicevox_engine ==="
+ls -la /opt/voicevox_engine
+
 echo "=== Starting VOICEVOX Engine on port 50021 ==="
 # Start VOICEVOX engine in the background using the embedded runner
 /opt/voicevox_engine/run --host 127.0.0.1 --port 50021 --cpu_num_threads 2 &
