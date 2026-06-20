@@ -1,23 +1,15 @@
 #!/bin/bash
 set -e
 
-echo "=== Listing files in /opt ==="
-ls -la /opt
-
-if [ -f /entrypoint.sh ]; then
-    echo "=== /entrypoint.sh content ==="
-    cat /entrypoint.sh
-fi
-
 # Ensure we are in the correct directory
 cd /opt/voicevox_engine
 
-echo "=== Listing files in /opt/voicevox_engine ==="
-ls -la /opt/voicevox_engine
+echo "=== Listing files in /opt/python/bin ==="
+ls -la /opt/python/bin || echo "No /opt/python/bin"
 
 echo "=== Starting VOICEVOX Engine on port 50021 ==="
-# Start VOICEVOX engine in the background using the embedded runner
-/opt/voicevox_engine/run --host 127.0.0.1 --port 50021 --cpu_num_threads 2 &
+# Start VOICEVOX engine in the background using the embedded Python environment
+/opt/python/bin/python3 run.py --host 127.0.0.1 --port 50021 --cpu_num_threads 2 &
 
 # Wait for VOICEVOX engine to become ready (max 120 seconds)
 echo "=== Waiting for VOICEVOX Engine to be ready ==="
