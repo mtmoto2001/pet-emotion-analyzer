@@ -309,12 +309,6 @@ export default function VoiceSettingsScreen() {
       return;
     }
 
-    const trimmedUrl = apiUrl.trim();
-    if (!trimmedUrl) {
-      Alert.alert('エラー', 'VOICEVOXの接続URLを入力してください🐾');
-      return;
-    }
-
     setSaving(true);
     try {
       let speakerName = '四国めたん';
@@ -341,9 +335,30 @@ export default function VoiceSettingsScreen() {
         }
       };
 
+      // 1. ローカルに保存
       await AsyncStorage.setItem('pet_profile', JSON.stringify(updatedProfile));
-      await AsyncStorage.setItem('voicevox_api_url', trimmedUrl);
-      await AsyncStorage.setItem('voicevox_api_key', apiKey.trim());
+
+      // 2. クラウド（スプレッドシートDB）にも自動で同期
+      try {
+        const savedUserId = await AsyncStorage.getItem('pet_user_id');
+        if (savedUserId) {
+          const proxyUrl = "https://script.google.com/macros/s/AKfycby_yneEPDfmGGpGrZwCgEWt3KIQxZ_5V5LgX_8z9ItloS_Pg0p-SxsAqBW0OFdWa_WFog/exec";
+          const syncRes = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              action: 'save_profile',
+              user_id: savedUserId,
+              profile: updatedProfile
+            })
+          });
+          if (!syncRes.ok) {
+            console.warn('クラウドDBとの同期に失敗しました（ステータス異常）');
+          }
+        }
+      } catch (cloudErr) {
+        console.warn('クラウドDBへの同期中に例外が発生しました:', cloudErr);
+      }
 
       setProfile(updatedProfile);
       Alert.alert('成功', '音声設定を保存しました🐾');
@@ -370,22 +385,14 @@ export default function VoiceSettingsScreen() {
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
         
         <View style={styles.card}>
-          <Text style={styles.sectionTitle}>☁️ VOICEVOX 接続設定</Text>
+          <Text style={styles.sectionTitle}>☁️ VOICEVOX 接続ステータス</Text>
           <Text style={styles.helpText}>
-            クラウド（Hugging Face Spaces）またはローカルPC上のVOICEVOXに接続します。{"\n"}
-            クラウドの場合はURLとAPIキーを入力してください。
+            現在、管理アプリ側で設定されたクラウド（Hugging Face Spaces）またはPCの音声合成サーバーに自動接続しています🐾
           </Text>
-          <Text style={[styles.helpText, { fontSize: 11, color: '#A08080', marginBottom: 4 }]}>接続先URL</Text>
-          <View style={{ flexDirection: 'row', gap: 8 }}>
-            <TextInput
-              style={[styles.input, { flex: 1 }]}
-              value={apiUrl}
-              onChangeText={setApiUrl}
-              placeholder="https://xxx.hf.space または http://192.168.X.X:50021"
-              placeholderTextColor="#A0A0A0"
-              autoCapitalize="none"
-              autoCorrect={false}
-            />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFF0F2', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: '#FFD0D6' }}>
+            <Text style={{ fontSize: 12, fontWeight: 'bold', color: '#5D4F4F', flex: 1, marginRight: 8 }} numberOfLines={1}>
+              📡 {apiUrl ? apiUrl.replace(/https?:\/\//, '') : '未接続（管理画面で設定してください）'}
+            </Text>
             <TouchableOpacity 
               style={styles.btnReloadSpeakers} 
               onPress={() => fetchSpeakers(apiUrl, selectedSpeaker)}
@@ -394,24 +401,10 @@ export default function VoiceSettingsScreen() {
               {loadingSpeakers ? (
                 <ActivityIndicator color="#C72C48" size="small" />
               ) : (
-                <Text style={styles.btnReloadSpeakersText}>🔄 読込</Text>
+                <Text style={styles.btnReloadSpeakersText}>🔄 更新</Text>
               )}
             </TouchableOpacity>
           </View>
-          <Text style={[styles.helpText, { fontSize: 11, color: '#A08080', marginTop: 12, marginBottom: 4 }]}>🔑 APIキー（クラウド接続時のみ）</Text>
-          <TextInput
-            style={styles.input}
-            value={apiKey}
-            onChangeText={setApiKey}
-            placeholder="クラウド認証用のAPIキーを入力"
-            placeholderTextColor="#A0A0A0"
-            autoCapitalize="none"
-            autoCorrect={false}
-            secureTextEntry={true}
-          />
-          <Text style={[styles.helpText, { fontSize: 10, color: '#B0A0A0', marginTop: 4, marginBottom: 0 }]}>
-            ローカルPC接続の場合はAPIキーは空欄でOKです
-          </Text>
         </View>
 
         <View style={styles.card}>

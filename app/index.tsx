@@ -10,7 +10,7 @@ export default function WelcomeGate() {
   const [profile, setProfile] = useState<{ owner_name: string; name: string } | null>(null);
 
   useEffect(() => {
-    async function checkLocalStorage() {
+    async function checkLocalStorageAndSync() {
       try {
         const savedUserId = await AsyncStorage.getItem('pet_user_id');
         const savedProfileRaw = await AsyncStorage.getItem('pet_profile');
@@ -19,13 +19,43 @@ export default function WelcomeGate() {
           const parsed = JSON.parse(savedProfileRaw);
           setProfile(parsed);
         }
+
+        // 管理画面（GAS）からVOICEVOXのクラウド接続設定を自動同期する
+        try {
+          const proxyUrl = "https://script.google.com/macros/s/AKfycby_yneEPDfmGGpGrZwCgEWt3KIQxZ_5V5LgX_8z9ItloS_Pg0p-SxsAqBW0OFdWa_WFog/exec";
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), 6000); // 起動を遅らせないよう6秒タイムアウト
+          
+          const res = await fetch(proxyUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'get_voice_settings' }),
+            signal: controller.signal
+          });
+          clearTimeout(timeoutId);
+
+          if (res.ok) {
+            const data = await res.json();
+            if (data.voicevox_api_url) {
+              await AsyncStorage.setItem('voicevox_api_url', data.voicevox_api_url.trim());
+            }
+            if (data.voicevox_api_key) {
+              await AsyncStorage.setItem('voicevox_api_key', data.voicevox_api_key.trim());
+            } else {
+              await AsyncStorage.removeItem('voicevox_api_key');
+            }
+          }
+        } catch (syncErr) {
+          console.warn('VOICEVOX設定の自動同期に失敗しました（オフラインまたは起動中）:', syncErr);
+        }
+
       } catch (e) {
         console.error('Failed to load profile from AsyncStorage:', e);
       } finally {
         setLoading(false);
       }
     }
-    checkLocalStorage();
+    checkLocalStorageAndSync();
   }, []);
 
   if (loading) {

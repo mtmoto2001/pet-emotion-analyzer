@@ -40,21 +40,37 @@ def load_config(user_id=None):
         pass
     return config
 
-def save_config(l_token, google_key, user_id=None): 
-    # 常にシステム共通の config.json に保存
-    save_json(CONFIG_FILE, {"LINE_CHANNEL_ACCESS_TOKEN": l_token, "GOOGLE_API_KEY": google_key})
+def save_config(l_token, google_key, voicevox_url=None, voicevox_key=None, user_id=None): 
+    # 常にシステム共通 of config.json に保存
+    config_data = {
+        "LINE_CHANNEL_ACCESS_TOKEN": l_token, 
+        "GOOGLE_API_KEY": google_key
+    }
+    if voicevox_url is not None:
+        config_data["VOICEVOX_API_URL"] = voicevox_url
+    if voicevox_key is not None:
+        config_data["VOICEVOX_API_KEY"] = voicevox_key
+        
+    save_json(CONFIG_FILE, config_data)
     
     # クラウドのスプレッドシートDB側のSettingsシートにも同期して即座に反映させる
     try:
         proxy_url = "https://script.google.com/macros/s/AKfycby_yneEPDfmGGpGrZwCgEWt3KIQxZ_5V5LgX_8z9ItloS_Pg0p-SxsAqBW0OFdWa_WFog/exec"
+        settings_payload = {
+            "GOOGLE_API_KEY": google_key,
+            "LINE_CHANNEL_ACCESS_TOKEN": l_token
+        }
+        if voicevox_url is not None:
+            settings_payload["VOICEVOX_API_URL"] = voicevox_url
+        if voicevox_key is not None:
+            settings_payload["VOICEVOX_API_KEY"] = voicevox_key
+
+        import requests
         requests.post(
             proxy_url,
             json={
                 "action": "save_settings",
-                "settings": {
-                    "GOOGLE_API_KEY": google_key,
-                    "LINE_CHANNEL_ACCESS_TOKEN": l_token
-                }
+                "settings": settings_payload
             },
             timeout=5
         )

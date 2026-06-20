@@ -23,6 +23,8 @@ function doPost(e) {
       return getLogs(requestData.apiKey, masterApiKey);
     } else if (action === "save_settings") {
       return saveSettingsAction(requestData.settings);
+    } else if (action === "get_voice_settings") {
+      return getVoiceSettingsAction();
     } else {
       throw new Error("Unknown action: " + action);
     }
@@ -353,4 +355,12 @@ function doGet(e) {
   evaluatedHtml.setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   evaluatedHtml.addMetaTag('viewport', 'width=device-width, initial-scale=1.0');
   return evaluatedHtml;
+}
+
+// 9. VOICEVOXの接続設定取得処理
+function getVoiceSettingsAction() {
+  return ContentService.createTextOutput(JSON.stringify({
+    voicevox_api_url: getSetting("VOICEVOX_API_URL"),
+    voicevox_api_key: getSetting("VOICEVOX_API_KEY")
+  })).setMimeType(ContentService.MimeType.JSON);
 }
