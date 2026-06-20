@@ -35,11 +35,12 @@ ELAPSED=0
 INTERVAL=2
 
 while [ $ELAPSED -lt $MAX_WAIT ]; do
-    if curl -s http://127.0.0.1:50021/version > /dev/null 2>&1; then
+    if /opt/python/bin/python3 -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:50021/version')" > /dev/null 2>&1; then
         echo "=== VOICEVOX Engine is ready! ==="
         break
     fi
     echo "  Waiting... (${ELAPSED}s / ${MAX_WAIT}s)"
+
     sleep $INTERVAL
     ELAPSED=$((ELAPSED + INTERVAL))
 done
