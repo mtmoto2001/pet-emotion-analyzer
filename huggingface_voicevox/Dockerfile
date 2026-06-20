@@ -3,8 +3,12 @@ FROM voicevox/voicevox_engine:cpu-ubuntu20.04-latest
 # Switch to root to install dependencies
 USER root
 
-# Install Python packages for the proxy
-RUN pip install --no-cache-dir fastapi uvicorn[standard] httpx
+# Install pip and clean up apt cache to keep image small
+RUN apt-get update && apt-get install -y --no-install-recommends python3-pip && \
+    rm -rf /var/lib/apt/lists/*
+
+# Install Python packages for the proxy using pip3
+RUN pip3 install --no-cache-dir fastapi uvicorn[standard] httpx
 
 # Copy application files
 COPY app.py /opt/app.py
