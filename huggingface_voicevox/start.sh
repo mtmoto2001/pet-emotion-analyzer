@@ -7,6 +7,9 @@ cd /opt/voicevox_engine
 # Explicitly set PYTHONPATH to include the default user's local site-packages
 export PYTHONPATH="/home/user/.local/lib/python3.11/site-packages:$PYTHONPATH"
 
+# Explicitly set LD_LIBRARY_PATH to find voicevox_core and onnxruntime
+export LD_LIBRARY_PATH="/opt/voicevox_core:/opt/onnxruntime/lib:$LD_LIBRARY_PATH"
+
 echo "=== Search for semver location ==="
 find / -name "semver" -type d 2>/dev/null || echo "semver directory not found"
 
@@ -19,8 +22,9 @@ echo "=== Python path and environment info ==="
 find /opt/python -name "uvicorn*" || echo "uvicorn not found in /opt/python"
 
 echo "=== Starting VOICEVOX Engine on port 50021 ==="
-# Start VOICEVOX engine in the background using the embedded Python environment
-/opt/python/bin/python3 run.py --host 127.0.0.1 --port 50021 --cpu_num_threads 2 &
+# Start VOICEVOX engine in the background using the embedded Python environment and specifying core paths
+/opt/python/bin/python3 run.py --host 127.0.0.1 --port 50021 --cpu_num_threads 2 --voicelib_dir /opt/voicevox_core --runtime_dir /opt/onnxruntime/lib &
+
 
 
 
